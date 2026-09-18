@@ -269,6 +269,51 @@
 
     .temp-panel.visible { display: block; }
 
+    .edit-panel {
+      display: none;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .edit-panel.visible { display: block; }
+
+    .edit-info {
+      margin-bottom: 12px;
+      padding: 9px 10px;
+      border: 1px solid #e8d69f;
+      border-radius: 7px;
+      background: var(--warning-soft);
+      color: var(--warning);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .edit-office {
+      margin-bottom: 10px;
+      padding: 9px 10px;
+      border: 1px solid var(--green-border);
+      border-radius: 7px;
+      background: #f6faf7;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .edit-office strong {
+      color: var(--green-dark);
+    }
+
+    .editor-host {
+      width: 100%;
+      min-height: 420px;
+      overflow: visible;
+    }
+
+    arcgis-editor {
+      display: block;
+      width: 100%;
+    }
+
     .temp-info {
       margin-bottom: 12px;
       padding: 9px 10px;
@@ -713,7 +758,7 @@
 
       <div class="header-status">
         <span class="status-dot"></span>
-        <span>Δοκιμαστική Έκδοση v5</span>
+        <span>Δοκιμαστική Έκδοση v6</span>
       </div>
     </header>
 
@@ -772,11 +817,12 @@
               <span class="arrow">›</span>
             </button>
 
-            <button class="tool-button disabled" type="button" disabled>
+            <button class="tool-button active-tool" id="editToolButton" type="button">
               <span>
                 <strong>Επεξεργασία δεδομένων</strong>
-                <small>Θα ενεργοποιηθεί σε επόμενο στάδιο</small>
+                <small>Geometry + attributes</small>
               </span>
+              <span class="arrow">›</span>
             </button>
           </div>
 
@@ -818,6 +864,32 @@
               <button class="secondary-button" id="clearTempButton" type="button">
                 Καθαρισμός προσωρινών
               </button>
+            </div>
+
+          </div>
+
+          <div class="edit-panel" id="editPanel">
+
+            <div class="edit-office">
+              Επεξεργασία στο <strong id="editOfficeName">Ιστιαίας</strong>
+            </div>
+
+            <div class="edit-info">
+              Οι αλλαγές εδώ είναι <strong>μόνιμες</strong> και γράφονται στο αντίστοιχο Hosted View /
+              Source Hosted Feature Layer. Επιτρέπονται δημιουργία, αλλαγή γεωμετρίας,
+              αλλαγή περιγραφικών πεδίων και διαγραφή.
+              Το πεδίο <strong>DASARXEIO</strong> και τα system / lineage fields δεν εμφανίζονται
+              για επεξεργασία, ώστε να προστατεύεται η αντιστοίχιση με το ενεργό Δασαρχείο.
+            </div>
+
+            <div class="editor-host">
+              <arcgis-editor
+                id="featureEditor"
+                reference-element="ddeMap"
+                heading-level="3"
+                hide-merge-button
+                hide-split-button
+              ></arcgis-editor>
             </div>
 
           </div>
@@ -1071,6 +1143,12 @@
     const tempGraphicsCount = document.getElementById("tempGraphicsCount");
     const clearTempButton = document.getElementById("clearTempButton");
     const tempSketch = document.getElementById("tempSketch");
+
+    const editToolButton = document.getElementById("editToolButton");
+    const editPanel = document.getElementById("editPanel");
+    const editOfficeName = document.getElementById("editOfficeName");
+    const featureEditor = document.getElementById("featureEditor");
+
     const uploadOfficeName = document.getElementById("uploadOfficeName");
     const targetLayerSelect = document.getElementById("targetLayerSelect");
     const downloadTemplateButton = document.getElementById("downloadTemplateButton");
@@ -1115,6 +1193,8 @@
     tempSketch.availableCreateTools = ["point", "polyline", "polygon"];
     tempSketch.creationMode = "update";
 
+    await featureEditor.componentOnReady();
+
     function showLoading(message) {
       loadingText.textContent = message || "Φόρτωση χάρτη...";
       loadingOverlay.classList.add("visible");
@@ -1156,6 +1236,7 @@
       currentOfficeName.textContent = office.title;
       mapBadgeOffice.textContent = office.title;
       uploadOfficeName.textContent = office.canonical;
+      editOfficeName.textContent = office.canonical;
       document.title = `${office.title} | ΔΔ Ευβοίας`;
 
       if (parsedGeoJSON) {
@@ -1164,9 +1245,102 @@
       }
     }
 
+    function editorFieldElements(layer) {
+      return layer.fields
+        .filter((field) => {
+          if (isSystemOrExcludedField(field)) return false;
+
+          const name = normalizeFieldName(field.name);
+
+          if (name === "DASARXEIO") return false;
+          if (name === "SOURCE_GID") return false;
+
+          return true;
+        })
+        .map((field) => ({
+          type: "field",
+          fieldName: field.name,
+          label: field.alias || field.name
+        }));
+    }
+
+    async function configureEditorForMap(webMap) {
+      const candidateLayers = webMap.allLayers
+        .toArray()
+        .filter((layer) => layer?.type === "feature");
+
+      await Promise.all(
+        candidateLayers.map(async (layer) => {
+          try {
+            await layer.load();
+          } catch (error) {
+            console.warn("Δεν φορτώθηκε layer για Editor:", layer?.title, error);
+          }
+        })
+      );
+
+      const editableLayers = candidateLayers.filter((layer) => {
+        const capabilities = layer.capabilities?.operations;
+        return capabilities?.supportsUpdate === true ||
+               capabilities?.supportsAdd === true ||
+               capabilities?.supportsDelete === true;
+      });
+
+      featureEditor.layerInfos = editableLayers.map((layer) => ({
+        layer,
+        enabled: true,
+        addEnabled: true,
+        updateEnabled: true,
+        deleteEnabled: true,
+        attributeUpdatesEnabled: true,
+        geometryUpdatesEnabled: true,
+        attachmentsOnCreateEnabled: false,
+        attachmentsOnUpdateEnabled: false,
+        formTemplate: {
+          title: layer.title,
+          description:
+            `Επεξεργασία ${layer.title}. Το DASARXEIO προστατεύεται από την εφαρμογή.`,
+          elements: editorFieldElements(layer)
+        }
+      }));
+
+      featureEditor.snappingOptions = {
+        enabled: true,
+        selfEnabled: true,
+        featureEnabled: true
+      };
+    }
+
+    async function confirmAndCancelEditorWorkflow(message) {
+      if (!featureEditor.activeWorkflow) return true;
+
+      const proceed = window.confirm(
+        message ||
+        "Υπάρχει επεξεργασία σε εξέλιξη. Να ακυρωθεί ώστε να συνεχίσουμε;"
+      );
+
+      if (!proceed) return false;
+
+      try {
+        await featureEditor.cancelWorkflow();
+      } catch (error) {
+        console.warn("Δεν ολοκληρώθηκε cancelWorkflow:", error);
+      }
+
+      return true;
+    }
+
     async function loadOfficeMap(officeKey) {
       const office = WEB_MAPS[officeKey];
       if (!office) return;
+
+      if (featureEditor.activeWorkflow) {
+        try {
+          await featureEditor.cancelWorkflow();
+        } catch (error) {
+          console.warn("Cancel Editor workflow πριν από αλλαγή χάρτη:", error);
+        }
+      }
 
       updateOfficeUI(officeKey);
       showLoading(`Φόρτωση χάρτη ${office.label}...`);
@@ -1188,6 +1362,8 @@
         mapElement.map = webMap;
         await mapElement.viewOnReady();
 
+        await configureEditorForMap(webMap);
+
         const initialViewpoint = webMap.initialViewProperties?.viewpoint;
         if (initialViewpoint) {
           await mapElement.goTo(initialViewpoint, { animate: false });
@@ -1207,13 +1383,33 @@
     }
 
     officeButtons.forEach((button) => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", async () => {
         if (uploadInProgress) return;
+
+        if (
+          !(await confirmAndCancelEditorWorkflow(
+            "Υπάρχει επεξεργασία σε εξέλιξη. Να ακυρωθεί και να αλλάξουμε Δασαρχείο;"
+          ))
+        ) {
+          return;
+        }
+
         loadOfficeMap(button.dataset.office);
       });
     });
 
     uploadToolButton.addEventListener("click", async () => {
+      const opening = !uploadPanel.classList.contains("visible");
+
+      if (
+        opening &&
+        !(await confirmAndCancelEditorWorkflow(
+          "Υπάρχει επεξεργασία σε εξέλιξη. Να ακυρωθεί και να ανοίξει το Upload GIS Data;"
+        ))
+      ) {
+        return;
+      }
+
       const visible = uploadPanel.classList.toggle("visible");
       uploadToolButton.classList.toggle("open", visible);
 
@@ -1222,6 +1418,9 @@
         tempToolButton.classList.remove("open");
         tempSketch.classList.add("temp-sketch-hidden");
         try { await tempSketch.cancel(); } catch (error) {}
+
+        editPanel.classList.remove("visible");
+        editToolButton.classList.remove("open");
       }
     });
 
@@ -1240,18 +1439,60 @@
     }
 
     tempToolButton.addEventListener("click", async () => {
+      const opening = !tempPanel.classList.contains("visible");
+
+      if (
+        opening &&
+        !(await confirmAndCancelEditorWorkflow(
+          "Υπάρχει επεξεργασία σε εξέλιξη. Να ακυρωθεί και να ανοίξει η προσωρινή λειτουργία;"
+        ))
+      ) {
+        return;
+      }
+
       const visible = tempPanel.classList.toggle("visible");
       tempToolButton.classList.toggle("open", visible);
 
       if (visible) {
         uploadPanel.classList.remove("visible");
         uploadToolButton.classList.remove("open");
+
+        editPanel.classList.remove("visible");
+        editToolButton.classList.remove("open");
+
         tempSketch.classList.remove("temp-sketch-hidden");
         setTempStatus(
           "info",
           "Προσωρινή λειτουργία ενεργή. Κανένα αντικείμενο αυτού του εργαλείου δεν αποθηκεύεται."
         );
       } else {
+        tempSketch.classList.add("temp-sketch-hidden");
+        try { await tempSketch.cancel(); } catch (error) {}
+      }
+    });
+
+    editToolButton.addEventListener("click", async () => {
+      const opening = !editPanel.classList.contains("visible");
+
+      if (!opening && featureEditor.activeWorkflow) {
+        if (
+          !(await confirmAndCancelEditorWorkflow(
+            "Υπάρχει επεξεργασία σε εξέλιξη. Να ακυρωθεί και να κλείσει το εργαλείο;"
+          ))
+        ) {
+          return;
+        }
+      }
+
+      const visible = editPanel.classList.toggle("visible");
+      editToolButton.classList.toggle("open", visible);
+
+      if (visible) {
+        uploadPanel.classList.remove("visible");
+        uploadToolButton.classList.remove("open");
+
+        tempPanel.classList.remove("visible");
+        tempToolButton.classList.remove("open");
         tempSketch.classList.add("temp-sketch-hidden");
         try { await tempSketch.cancel(); } catch (error) {}
       }
