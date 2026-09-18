@@ -260,6 +260,41 @@
 
     .upload-panel.visible { display: block; }
 
+    .temp-panel {
+      display: none;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .temp-panel.visible { display: block; }
+
+    .temp-info {
+      margin-bottom: 12px;
+      padding: 9px 10px;
+      border: 1px solid #cbd9e6;
+      border-radius: 7px;
+      background: #f0f5fa;
+      color: #2f526f;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .temp-count {
+      margin-top: 8px;
+      padding: 8px 9px;
+      border: 1px solid var(--green-border);
+      border-radius: 7px;
+      background: #f6faf7;
+      color: var(--green-dark);
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .temp-sketch-hidden {
+      display: none !important;
+    }
+
     .form-group { margin-bottom: 12px; }
 
     .form-label {
@@ -678,7 +713,7 @@
 
       <div class="header-status">
         <span class="status-dot"></span>
-        <span>Δοκιμαστική Έκδοση v4</span>
+        <span>Δοκιμαστική Έκδοση v5</span>
       </div>
     </header>
 
@@ -729,11 +764,12 @@
               <span class="arrow">›</span>
             </button>
 
-            <button class="tool-button disabled" type="button" disabled>
+            <button class="tool-button active-tool" id="tempToolButton" type="button">
               <span>
                 <strong>Προσωρινή προβολή / σχεδίαση</strong>
-                <small>Χωρίς αποθήκευση στα δεδομένα — επόμενο στάδιο</small>
+                <small>Χωρίς αποθήκευση στα δεδομένα</small>
               </span>
+              <span class="arrow">›</span>
             </button>
 
             <button class="tool-button disabled" type="button" disabled>
@@ -742,6 +778,48 @@
                 <small>Θα ενεργοποιηθεί σε επόμενο στάδιο</small>
               </span>
             </button>
+          </div>
+
+          <div class="temp-panel" id="tempPanel">
+
+            <div class="temp-info">
+              Τα αντικείμενα αυτού του εργαλείου εμφανίζονται μόνο προσωρινά στον χάρτη.
+              <strong>Δεν αποθηκεύονται</strong> σε Hosted Layer, View ή SDE και χάνονται με ανανέωση της σελίδας.
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="tempFileInput">Προσωρινή φόρτωση αρχείου</label>
+              <input
+                class="file-input"
+                id="tempFileInput"
+                type="file"
+                accept=".zip,.geojson,.json"
+              />
+              <div class="hint">
+                ZIP Shapefile ή GeoJSON. Δεν απαιτείται επιλογή layer προορισμού και δεν γίνεται εγγραφή δεδομένων.
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Σχεδίαση στον χάρτη</label>
+              <div class="hint">
+                Όταν είναι ανοικτό αυτό το εργαλείο, χρησιμοποίησε τα εργαλεία σχεδίασης πάνω δεξιά στον χάρτη
+                για σημείο, γραμμή ή πολύγωνο. Τα σχήματα μπορούν να μετακινηθούν ή να διορθωθούν προσωρινά.
+              </div>
+            </div>
+
+            <div class="temp-count">
+              Προσωρινά αντικείμενα: <span id="tempGraphicsCount">0</span>
+            </div>
+
+            <div class="status-box" id="tempStatus"></div>
+
+            <div class="action-row">
+              <button class="secondary-button" id="clearTempButton" type="button">
+                Καθαρισμός προσωρινών
+              </button>
+            </div>
+
           </div>
 
           <div class="upload-panel" id="uploadPanel">
@@ -863,6 +941,14 @@
           item-id="0d593f53db9b4334adc69a40694d10db"
         >
           <arcgis-zoom slot="top-left"></arcgis-zoom>
+
+          <arcgis-sketch
+            id="tempSketch"
+            class="temp-sketch-hidden"
+            slot="top-right"
+            creation-mode="update"
+            default-graphics-layer-disabled
+          ></arcgis-sketch>
         </arcgis-map>
 
         <a
@@ -941,6 +1027,7 @@
     const [
       WebMap,
       FeatureLayer,
+      GraphicsLayer,
       Graphic,
       SpatialReference,
       Point,
@@ -952,6 +1039,7 @@
     ] = await Promise.all([
       $arcgis.import("@arcgis/core/WebMap.js"),
       $arcgis.import("@arcgis/core/layers/FeatureLayer.js"),
+      $arcgis.import("@arcgis/core/layers/GraphicsLayer.js"),
       $arcgis.import("@arcgis/core/Graphic.js"),
       $arcgis.import("@arcgis/core/geometry/SpatialReference.js"),
       $arcgis.import("@arcgis/core/geometry/Point.js"),
@@ -975,6 +1063,14 @@
 
     const uploadToolButton = document.getElementById("uploadToolButton");
     const uploadPanel = document.getElementById("uploadPanel");
+
+    const tempToolButton = document.getElementById("tempToolButton");
+    const tempPanel = document.getElementById("tempPanel");
+    const tempFileInput = document.getElementById("tempFileInput");
+    const tempStatus = document.getElementById("tempStatus");
+    const tempGraphicsCount = document.getElementById("tempGraphicsCount");
+    const clearTempButton = document.getElementById("clearTempButton");
+    const tempSketch = document.getElementById("tempSketch");
     const uploadOfficeName = document.getElementById("uploadOfficeName");
     const targetLayerSelect = document.getElementById("targetLayerSelect");
     const downloadTemplateButton = document.getElementById("downloadTemplateButton");
@@ -1005,9 +1101,19 @@
     let uploadReview = null;
     let reviewTargetLayer = null;
 
+    const tempGraphicsLayer = new GraphicsLayer({
+      title: "Προσωρινά γραφικά",
+      listMode: "hide"
+    });
+
     await layerList.componentOnReady();
     layerList.showHeading = false;
     layerList.showFilter = false;
+
+    await tempSketch.componentOnReady();
+    tempSketch.layer = tempGraphicsLayer;
+    tempSketch.availableCreateTools = ["point", "polyline", "polygon"];
+    tempSketch.creationMode = "update";
 
     function showLoading(message) {
       loadingText.textContent = message || "Φόρτωση χάρτη...";
@@ -1071,6 +1177,14 @@
         });
 
         await webMap.load();
+
+        try {
+          mapElement.map?.remove(tempGraphicsLayer);
+        } catch (error) {
+          // Το layer μπορεί να μην ανήκει ακόμη σε map.
+        }
+
+        webMap.add(tempGraphicsLayer);
         mapElement.map = webMap;
         await mapElement.viewOnReady();
 
@@ -1099,9 +1213,199 @@
       });
     });
 
-    uploadToolButton.addEventListener("click", () => {
+    uploadToolButton.addEventListener("click", async () => {
       const visible = uploadPanel.classList.toggle("visible");
       uploadToolButton.classList.toggle("open", visible);
+
+      if (visible) {
+        tempPanel.classList.remove("visible");
+        tempToolButton.classList.remove("open");
+        tempSketch.classList.add("temp-sketch-hidden");
+        try { await tempSketch.cancel(); } catch (error) {}
+      }
+    });
+
+    function setTempStatus(type, message) {
+      tempStatus.className = `status-box visible ${type}`;
+      tempStatus.textContent = message;
+    }
+
+    function clearTempStatus() {
+      tempStatus.className = "status-box";
+      tempStatus.textContent = "";
+    }
+
+    function updateTempGraphicsCount() {
+      tempGraphicsCount.textContent = String(tempGraphicsLayer.graphics.length);
+    }
+
+    tempToolButton.addEventListener("click", async () => {
+      const visible = tempPanel.classList.toggle("visible");
+      tempToolButton.classList.toggle("open", visible);
+
+      if (visible) {
+        uploadPanel.classList.remove("visible");
+        uploadToolButton.classList.remove("open");
+        tempSketch.classList.remove("temp-sketch-hidden");
+        setTempStatus(
+          "info",
+          "Προσωρινή λειτουργία ενεργή. Κανένα αντικείμενο αυτού του εργαλείου δεν αποθηκεύεται."
+        );
+      } else {
+        tempSketch.classList.add("temp-sketch-hidden");
+        try { await tempSketch.cancel(); } catch (error) {}
+      }
+    });
+
+    tempSketch.addEventListener("arcgisCreate", () => {
+      window.setTimeout(updateTempGraphicsCount, 0);
+    });
+
+    tempSketch.addEventListener("arcgisDelete", () => {
+      window.setTimeout(updateTempGraphicsCount, 0);
+    });
+
+    clearTempButton.addEventListener("click", async () => {
+      try { await tempSketch.cancel(); } catch (error) {}
+      tempGraphicsLayer.removeAll();
+      tempFileInput.value = "";
+      updateTempGraphicsCount();
+      setTempStatus("success", "Όλα τα προσωρινά αντικείμενα αφαιρέθηκαν από τον χάρτη.");
+    });
+
+    function temporarySymbol(geometryType) {
+      if (geometryType === "point" || geometryType === "multipoint") {
+        return {
+          type: "simple-marker",
+          style: "circle",
+          size: 9,
+          color: [39, 103, 73, 0.92],
+          outline: {
+            color: [255, 255, 255, 1],
+            width: 1.5
+          }
+        };
+      }
+
+      if (geometryType === "polyline") {
+        return {
+          type: "simple-line",
+          color: [39, 103, 73, 0.95],
+          width: 3
+        };
+      }
+
+      return {
+        type: "simple-fill",
+        color: [39, 103, 73, 0.16],
+        outline: {
+          color: [39, 103, 73, 0.95],
+          width: 2
+        }
+      };
+    }
+
+    async function buildTemporaryGraphic(feature) {
+      const geometry4326 = geoJSONToArcGISGeometry(feature.geometry);
+
+      if (!geometry4326) {
+        throw new Error("Feature χωρίς geometry.");
+      }
+
+      if (!projectOperator.isLoaded()) {
+        await projectOperator.load();
+      }
+
+      let geometry2100 = projectOperator.execute(
+        geometry4326,
+        SR_EGSA87
+      );
+
+      if (!geometry2100) {
+        throw new Error("Αποτυχία μετασχηματισμού geometry σε EPSG:2100.");
+      }
+
+      if (geometry2100.type === "polygon" || geometry2100.type === "polyline") {
+        geometry2100 = simplifyOperator.execute(geometry2100) || geometry2100;
+      }
+
+      return new Graphic({
+        geometry: geometry2100,
+        attributes: { ...(feature.properties || {}) },
+        symbol: temporarySymbol(geometry2100.type)
+      });
+    }
+
+    tempFileInput.addEventListener("change", async () => {
+      clearTempStatus();
+
+      const file = tempFileInput.files?.[0];
+      if (!file) return;
+
+      try {
+        setTempStatus("info", "Ανάγνωση προσωρινού αρχείου...");
+
+        const extension = file.name.split(".").pop()?.toLowerCase();
+        let parsed;
+
+        if (extension === "zip") {
+          parsed = await shp(await file.arrayBuffer());
+        } else if (extension === "geojson" || extension === "json") {
+          parsed = JSON.parse(await file.text());
+        } else {
+          throw new Error("Επίλεξε ZIP Shapefile ή GeoJSON.");
+        }
+
+        const featureCollection = normalizeFeatureCollection(parsed);
+
+        if (!featureCollection.features.length) {
+          throw new Error("Το αρχείο δεν περιέχει features.");
+        }
+
+        inspectGeometry(featureCollection.features);
+
+        const graphics = [];
+
+        for (let i = 0; i < featureCollection.features.length; i++) {
+          const feature = featureCollection.features[i];
+
+          if (!feature?.geometry) {
+            continue;
+          }
+
+          graphics.push(
+            await buildTemporaryGraphic(feature)
+          );
+        }
+
+        if (!graphics.length) {
+          throw new Error("Δεν βρέθηκαν features με έγκυρη γεωμετρία.");
+        }
+
+        tempGraphicsLayer.addMany(graphics);
+        updateTempGraphicsCount();
+
+        try {
+          await mapElement.goTo(graphics, {
+            animate: false
+          });
+        } catch (error) {
+          console.warn("Δεν έγινε αυτόματο zoom στα προσωρινά γραφικά:", error);
+        }
+
+        setTempStatus(
+          "success",
+          `${graphics.length} προσωρινά αντικείμενα προστέθηκαν στον χάρτη. Δεν αποθηκεύτηκαν σε κανένα layer.`
+        );
+      } catch (error) {
+        console.error("Temporary file error:", error);
+        setTempStatus(
+          "error",
+          error?.message || "Δεν ήταν δυνατή η προσωρινή φόρτωση του αρχείου."
+        );
+      } finally {
+        tempFileInput.value = "";
+      }
     });
 
     function updateTemplateButton() {
