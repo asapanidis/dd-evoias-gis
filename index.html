@@ -829,385 +829,392 @@
 
   <script type="module">
 
-    /* =========================================================
-       WEB MAPS
+  /* =========================================================
+     WEB MAPS
+  ========================================================= */
 
-       ΣΩΣΤΗ ΑΝΤΙΣΤΟΙΧΙΣΗ
-    ========================================================= */
+  const WEB_MAPS = {
 
-    const WEB_MAPS = {
+    istiaias: {
+      label: "Ιστιαίας",
+      title: "Δασαρχείο Ιστιαίας",
+      itemId: "0d593f53db9b4334adc69a40694d10db"
+    },
 
-      istiaias: {
+    limnis: {
+      label: "Λίμνης",
+      title: "Δασαρχείο Λίμνης",
+      itemId: "89dd24123e794620a46aad672ae89b58"
+    },
 
-        label: "Ιστιαίας",
+    chalkidas: {
+      label: "Χαλκίδας",
+      title: "Δασαρχείο Χαλκίδας",
+      itemId: "b8c2c95807a74cf688cfdce364d732f1"
+    },
 
-        title:
-          "Δασαρχείο Ιστιαίας",
+    aliveriou: {
+      label: "Αλιβερίου",
+      title: "Δασαρχείο Αλιβερίου",
+      itemId: "0f4a6c8d12924d16b7255554e4eef9f9"
+    }
 
-        itemId:
-          "0d593f53db9b4334adc69a40694d10db"
-
-      },
-
-
-      limnis: {
-
-        label: "Λίμνης",
-
-        title:
-          "Δασαρχείο Λίμνης",
-
-        itemId:
-          "89dd24123e794620a46aad672ae89b58"
-
-      },
-
-
-      chalkidas: {
-
-        label: "Χαλκίδας",
-
-        title:
-          "Δασαρχείο Χαλκίδας",
-
-        itemId:
-          "b8c2c95807a74cf688cfdce364d732f1"
-
-      },
+  };
 
 
-      aliveriou: {
+  /* =========================================================
+     ARCGIS
+  ========================================================= */
 
-        label: "Αλιβερίου",
+  const WebMap =
+    await $arcgis.import(
+      "@arcgis/core/WebMap.js"
+    );
 
-        title:
-          "Δασαρχείο Αλιβερίου",
 
-        itemId:
-          "0f4a6c8d12924d16b7255554e4eef9f9"
+  /* =========================================================
+     DOM
+  ========================================================= */
+
+  const mapElement =
+    document.getElementById(
+      "ddeMap"
+    );
+
+  const officeButtons =
+    document.querySelectorAll(
+      ".office-button"
+    );
+
+  const currentOfficeName =
+    document.getElementById(
+      "currentOfficeName"
+    );
+
+  const mapBadgeOffice =
+    document.getElementById(
+      "mapBadgeOffice"
+    );
+
+  const loadingOverlay =
+    document.getElementById(
+      "loadingOverlay"
+    );
+
+  const loadingText =
+    document.getElementById(
+      "loadingText"
+    );
+
+  const layerList =
+    document.getElementById(
+      "layerList"
+    );
+
+
+  /* =========================================================
+     LAYER LIST
+  ========================================================= */
+
+  await layerList.componentOnReady();
+
+  layerList.showHeading = false;
+  layerList.showFilter = false;
+
+
+  /* =========================================================
+     LOADING
+  ========================================================= */
+
+  function showLoading(message) {
+
+    loadingText.textContent =
+      message || "Φόρτωση χάρτη...";
+
+    loadingOverlay.classList.add(
+      "visible"
+    );
+
+  }
+
+
+  function hideLoading() {
+
+    loadingOverlay.classList.remove(
+      "visible"
+    );
+
+  }
+
+
+  /* =========================================================
+     UI
+  ========================================================= */
+
+  function updateOfficeUI(officeKey) {
+
+    const office =
+      WEB_MAPS[officeKey];
+
+
+    officeButtons.forEach(
+      (button) => {
+
+        const isActive =
+          button.dataset.office ===
+          officeKey;
+
+        button.classList.toggle(
+          "active",
+          isActive
+        );
+
+        button.setAttribute(
+          "aria-pressed",
+          isActive
+            ? "true"
+            : "false"
+        );
+
+      }
+    );
+
+
+    currentOfficeName.textContent =
+      office.title;
+
+    mapBadgeOffice.textContent =
+      office.title;
+
+    document.title =
+      `${office.title} | ΔΔ Ευβοίας`;
+
+  }
+
+
+  /* =========================================================
+     LOAD OFFICE WEB MAP
+  ========================================================= */
+
+  async function loadOfficeMap(
+    officeKey
+  ) {
+
+    const office =
+      WEB_MAPS[officeKey];
+
+
+    if (!office) {
+      return;
+    }
+
+
+    updateOfficeUI(
+      officeKey
+    );
+
+
+    showLoading(
+      `Φόρτωση χάρτη ${office.label}...`
+    );
+
+
+    try {
+
+      /*
+        Δημιουργία του αντίστοιχου Web Map.
+      */
+
+      const webMap =
+        new WebMap({
+
+          portalItem: {
+            id: office.itemId
+          }
+
+        });
+
+
+      /*
+        Φόρτωση του Web Map μαζί με τις
+        αποθηκευμένες αρχικές ιδιότητες θέασης.
+      */
+
+      await webMap.load();
+
+
+      /*
+        Αντικατάσταση του χάρτη στο υπάρχον
+        ArcGIS map component.
+      */
+
+      mapElement.map =
+        webMap;
+
+
+      /*
+        Περιμένουμε να είναι έτοιμο το MapView.
+      */
+
+      await mapElement.viewOnReady();
+
+
+      /*
+        ΣΗΜΑΝΤΙΚΟ:
+
+        Εφαρμόζουμε το αρχικό Viewpoint που είναι
+        αποθηκευμένο στο συγκεκριμένο Web Map.
+
+        Έτσι κάθε Δασαρχείο ανοίγει στο δικό του
+        αποθηκευμένο extent / scale / center.
+      */
+
+      const initialViewpoint =
+        webMap.initialViewProperties
+          ?.viewpoint;
+
+
+      if (initialViewpoint) {
+
+        await mapElement.goTo(
+          initialViewpoint,
+          {
+            animate: false
+          }
+        );
 
       }
 
-    };
 
+      /*
+        Αποθήκευση τελευταίου επιλεγμένου
+        Δασαρχείου στον browser.
+      */
 
-    /* =========================================================
-       ArcGIS WebMap
-    ========================================================= */
-
-    const WebMap =
-      await $arcgis.import(
-        "@arcgis/core/WebMap.js"
+      localStorage.setItem(
+        "ddEvoiasOffice",
+        officeKey
       );
 
 
-    /* =========================================================
-       DOM
-    ========================================================= */
+      /*
+        Ενημέρωση URL.
+      */
 
-    const mapElement =
-      document.getElementById(
-        "ddeMap"
+      const url =
+        new URL(
+          window.location.href
+        );
+
+
+      url.searchParams.set(
+        "office",
+        officeKey
       );
 
 
-    const officeButtons =
-      document.querySelectorAll(
-        ".office-button"
+      window.history.replaceState(
+        {},
+        "",
+        url
       );
 
 
-    const currentOfficeName =
-      document.getElementById(
-        "currentOfficeName"
+      hideLoading();
+
+    }
+    catch (error) {
+
+      console.error(
+        "Σφάλμα φόρτωσης Web Map:",
+        error
       );
 
-
-    const mapBadgeOffice =
-      document.getElementById(
-        "mapBadgeOffice"
-      );
-
-
-    const loadingOverlay =
-      document.getElementById(
-        "loadingOverlay"
-      );
-
-
-    const loadingText =
-      document.getElementById(
-        "loadingText"
-      );
-
-
-    const layerList =
-      document.getElementById(
-        "layerList"
-      );
-
-
-    /* =========================================================
-       Layer List
-    ========================================================= */
-
-    await layerList.componentOnReady();
-
-
-    layerList.showHeading = false;
-
-    layerList.showFilter = false;
-
-
-    /* =========================================================
-       Loading
-    ========================================================= */
-
-    function showLoading(message) {
 
       loadingText.textContent =
-        message ||
-        "Φόρτωση χάρτη...";
-
-
-      loadingOverlay.classList.add(
-        "visible"
-      );
+        "Δεν ήταν δυνατή η φόρτωση του χάρτη.";
 
     }
 
-
-    function hideLoading() {
-
-      loadingOverlay.classList.remove(
-        "visible"
-      );
-
-    }
+  }
 
 
-    /* =========================================================
-       UI
-    ========================================================= */
+  /* =========================================================
+     OFFICE BUTTONS
+  ========================================================= */
 
-    function updateOfficeUI(officeKey) {
+  officeButtons.forEach(
+    (button) => {
 
-      const office =
-        WEB_MAPS[officeKey];
+      button.addEventListener(
+        "click",
+        () => {
 
+          const officeKey =
+            button.dataset.office;
 
-      officeButtons.forEach(
-        (button) => {
-
-          const isActive =
-            button.dataset.office ===
-            officeKey;
-
-
-          button.classList.toggle(
-            "active",
-            isActive
-          );
-
-
-          button.setAttribute(
-            "aria-pressed",
-            isActive
-              ? "true"
-              : "false"
+          loadOfficeMap(
+            officeKey
           );
 
         }
       );
 
-
-      currentOfficeName.textContent =
-        office.title;
-
-
-      mapBadgeOffice.textContent =
-        office.title;
-
-
-      document.title =
-        `${office.title} | ΔΔ Ευβοίας`;
-
     }
+  );
 
 
-    /* =========================================================
-       LOAD OFFICE WEB MAP
-    ========================================================= */
+  /* =========================================================
+     INITIAL OFFICE
+  ========================================================= */
 
-    async function loadOfficeMap(
-      officeKey
-    ) {
-
-      const office =
-        WEB_MAPS[officeKey];
-
-
-      if (!office) {
-        return;
-      }
-
-
-      updateOfficeUI(
-        officeKey
-      );
-
-
-      showLoading(
-        `Φόρτωση χάρτη ${office.label}...`
-      );
-
-
-      try {
-
-        const webMap =
-          new WebMap({
-
-            portalItem: {
-
-              id:
-                office.itemId
-
-            }
-
-          });
-
-
-        await webMap.load();
-
-
-        mapElement.map =
-          webMap;
-
-
-        await mapElement.viewOnReady();
-
-
-        localStorage.setItem(
-          "ddEvoiasOffice",
-          officeKey
-        );
-
-
-        const url =
-          new URL(
-            window.location.href
-          );
-
-
-        url.searchParams.set(
-          "office",
-          officeKey
-        );
-
-
-        window.history.replaceState(
-          {},
-          "",
-          url
-        );
-
-
-        hideLoading();
-
-      }
-      catch (error) {
-
-        console.error(
-          "Σφάλμα φόρτωσης Web Map:",
-          error
-        );
-
-
-        loadingText.textContent =
-          "Δεν ήταν δυνατή η φόρτωση του χάρτη.";
-
-      }
-
-    }
-
-
-    /* =========================================================
-       OFFICE BUTTONS
-    ========================================================= */
-
-    officeButtons.forEach(
-      (button) => {
-
-        button.addEventListener(
-          "click",
-          () => {
-
-            const officeKey =
-              button.dataset.office;
-
-
-            loadOfficeMap(
-              officeKey
-            );
-
-          }
-        );
-
-      }
+  const urlParameters =
+    new URLSearchParams(
+      window.location.search
     );
 
 
-    /* =========================================================
-       INITIAL OFFICE
-    ========================================================= */
-
-    const urlParameters =
-      new URLSearchParams(
-        window.location.search
-      );
-
-
-    const urlOffice =
-      urlParameters.get(
-        "office"
-      );
-
-
-    const savedOffice =
-      localStorage.getItem(
-        "ddEvoiasOffice"
-      );
-
-
-    let initialOffice =
-      "istiaias";
-
-
-    if (
-      urlOffice &&
-      WEB_MAPS[urlOffice]
-    ) {
-
-      initialOffice =
-        urlOffice;
-
-    }
-    else if (
-      savedOffice &&
-      WEB_MAPS[savedOffice]
-    ) {
-
-      initialOffice =
-        savedOffice;
-
-    }
-
-
-    loadOfficeMap(
-      initialOffice
+  const urlOffice =
+    urlParameters.get(
+      "office"
     );
 
-  </script>
+
+  const savedOffice =
+    localStorage.getItem(
+      "ddEvoiasOffice"
+    );
+
+
+  let initialOffice =
+    "istiaias";
+
+
+  if (
+    urlOffice &&
+    WEB_MAPS[urlOffice]
+  ) {
+
+    initialOffice =
+      urlOffice;
+
+  }
+  else if (
+    savedOffice &&
+    WEB_MAPS[savedOffice]
+  ) {
+
+    initialOffice =
+      savedOffice;
+
+  }
+
+
+  loadOfficeMap(
+    initialOffice
+  );
+
+</script>
 
 </body>
 </html>
