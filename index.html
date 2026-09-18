@@ -1,0 +1,1073 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1"
+  />
+
+  <title>Διεύθυνση Δασών Ευβοίας | GIS</title>
+
+  <!-- ArcGIS Maps SDK for JavaScript 5.1 -->
+  <script type="module" src="https://js.arcgis.com/5.1/"></script>
+
+  <style>
+    :root {
+      --green-dark: #173f2d;
+      --green: #276749;
+      --green-soft: #e8f1eb;
+      --green-border: #c8d9ce;
+
+      --bg: #f4f6f5;
+      --panel: #ffffff;
+      --text: #1f2933;
+      --muted: #66756d;
+      --border: #dce4df;
+
+      --header-height: 68px;
+      --sidebar-width: 330px;
+
+      font-family:
+        Inter,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .app {
+      width: 100%;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: var(--header-height) 1fr;
+    }
+
+    /* -----------------------------------------------------------
+       HEADER
+    ----------------------------------------------------------- */
+
+    .app-header {
+      min-height: var(--header-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 22px;
+
+      background: var(--green-dark);
+      color: white;
+
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+      z-index: 10;
+    }
+
+    .brand {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .brand-mark {
+      width: 44px;
+      height: 44px;
+      flex: 0 0 44px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      border-radius: 9px;
+
+      background: rgba(255, 255, 255, 0.1);
+
+      font-size: 14px;
+      font-weight: 750;
+      letter-spacing: 0.04em;
+    }
+
+    .brand-text {
+      min-width: 0;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+      font-weight: 700;
+    }
+
+    .brand-subtitle {
+      margin-top: 3px;
+      font-size: 12px;
+      line-height: 1.2;
+      color: rgba(255, 255, 255, 0.78);
+
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-status {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      padding: 7px 11px;
+      border-radius: 16px;
+
+      background: rgba(255, 255, 255, 0.1);
+
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #7ee2a8;
+    }
+
+    /* -----------------------------------------------------------
+       MAIN LAYOUT
+    ----------------------------------------------------------- */
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    }
+
+    /* -----------------------------------------------------------
+       SIDEBAR
+    ----------------------------------------------------------- */
+
+    .sidebar {
+      min-height: 0;
+      overflow-y: auto;
+
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+    }
+
+    .sidebar-section {
+      padding: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-section:last-child {
+      border-bottom: 0;
+    }
+
+    .section-title {
+      margin: 0 0 12px 0;
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: 0.055em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* -----------------------------------------------------------
+       OFFICE BUTTONS
+    ----------------------------------------------------------- */
+
+    .office-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .office-button {
+      width: 100%;
+      min-height: 45px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+
+      padding: 10px 12px;
+
+      border: 1px solid var(--border);
+      border-radius: 8px;
+
+      background: white;
+      color: var(--text);
+
+      text-align: left;
+      cursor: pointer;
+
+      transition:
+        border-color 0.15s ease,
+        background-color 0.15s ease,
+        transform 0.05s ease;
+    }
+
+    .office-button:hover {
+      border-color: var(--green);
+      background: #f8fbf9;
+    }
+
+    .office-button:active {
+      transform: translateY(1px);
+    }
+
+    .office-button.active {
+      border-color: var(--green);
+      background: var(--green-soft);
+      color: var(--green-dark);
+      font-weight: 650;
+    }
+
+    .office-button .arrow {
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .office-button.active .arrow {
+      color: var(--green);
+    }
+
+    /* -----------------------------------------------------------
+       CURRENT OFFICE
+    ----------------------------------------------------------- */
+
+    .current-office {
+      margin-top: 12px;
+      padding: 10px 12px;
+
+      border: 1px solid var(--green-border);
+      border-radius: 8px;
+
+      background: #f6faf7;
+    }
+
+    .current-office-label {
+      margin-bottom: 3px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .current-office-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--green-dark);
+    }
+
+    /* -----------------------------------------------------------
+       LAYER LIST
+    ----------------------------------------------------------- */
+
+    .layer-list-wrapper {
+      min-height: 180px;
+    }
+
+    arcgis-layer-list {
+      width: 100%;
+      display: block;
+    }
+
+    /* -----------------------------------------------------------
+       TOOLS
+    ----------------------------------------------------------- */
+
+    .tool-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tool-button {
+      width: 100%;
+      min-height: 46px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+
+      padding: 9px 12px;
+
+      border: 1px solid var(--border);
+      border-radius: 8px;
+
+      background: white;
+      color: var(--text);
+
+      text-align: left;
+    }
+
+    .tool-button strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .tool-button small {
+      display: block;
+      margin-top: 2px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .tool-button.disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+    }
+
+    .prototype-note {
+      font-size: 11px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    /* -----------------------------------------------------------
+       MAP
+    ----------------------------------------------------------- */
+
+    .map-panel {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: #dfe6e2;
+    }
+
+    #ddeMap {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .map-badge {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      z-index: 5;
+
+      max-width: calc(100% - 28px);
+
+      padding: 8px 11px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 7px;
+
+      background: rgba(255, 255, 255, 0.94);
+
+      box-shadow: 0 2px 7px rgba(0, 0, 0, 0.12);
+
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .map-badge strong {
+      color: var(--green-dark);
+    }
+
+    /* -----------------------------------------------------------
+       LOADING
+    ----------------------------------------------------------- */
+
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 8;
+
+      display: none;
+      align-items: center;
+      justify-content: center;
+
+      background: rgba(244, 246, 245, 0.68);
+      backdrop-filter: blur(1px);
+    }
+
+    .loading-overlay.visible {
+      display: flex;
+    }
+
+    .loading-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      padding: 13px 16px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+
+      background: white;
+
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+
+      font-size: 13px;
+    }
+
+    .spinner {
+      width: 19px;
+      height: 19px;
+
+      border: 3px solid #dbe7df;
+      border-top-color: var(--green);
+      border-radius: 50%;
+
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* -----------------------------------------------------------
+       RESPONSIVE
+    ----------------------------------------------------------- */
+
+    @media (max-width: 850px) {
+      :root {
+        --sidebar-width: 265px;
+      }
+
+      .brand-title {
+        font-size: 15px;
+      }
+
+      .brand-subtitle {
+        display: none;
+      }
+
+      .header-status {
+        display: none;
+      }
+    }
+
+    @media (max-width: 620px) {
+      :root {
+        --header-height: 58px;
+      }
+
+      .app-header {
+        padding: 0 10px;
+      }
+
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        flex-basis: 38px;
+      }
+
+      .workspace {
+        grid-template-columns: 215px minmax(0, 1fr);
+      }
+
+      .sidebar-section {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+
+    <!-- =======================================================
+         HEADER
+    ======================================================== -->
+
+    <header class="app-header">
+
+      <div class="brand">
+
+        <div class="brand-mark">
+          ΔΔ
+        </div>
+
+        <div class="brand-text">
+          <div class="brand-title">
+            Διεύθυνση Δασών Ευβοίας
+          </div>
+
+          <div class="brand-subtitle">
+            Πιλοτικό Σύστημα Γεωχωρικών Δεδομένων
+          </div>
+        </div>
+
+      </div>
+
+      <div class="header-status">
+        <span class="status-dot"></span>
+        <span>Περιβάλλον δοκιμών</span>
+      </div>
+
+    </header>
+
+
+    <!-- =======================================================
+         WORKSPACE
+    ======================================================== -->
+
+    <main class="workspace">
+
+      <!-- =====================================================
+           SIDEBAR
+      ====================================================== -->
+
+      <aside class="sidebar">
+
+        <!-- OFFICE -->
+
+        <section class="sidebar-section">
+
+          <h2 class="section-title">
+            Δασαρχείο
+          </h2>
+
+          <div class="office-list">
+
+            <button
+              class="office-button active"
+              type="button"
+              data-office="istiaias"
+            >
+              <span>Ιστιαίας</span>
+              <span class="arrow">›</span>
+            </button>
+
+            <button
+              class="office-button"
+              type="button"
+              data-office="limnis"
+            >
+              <span>Λίμνης</span>
+              <span class="arrow">›</span>
+            </button>
+
+            <button
+              class="office-button"
+              type="button"
+              data-office="chalkidas"
+            >
+              <span>Χαλκίδας</span>
+              <span class="arrow">›</span>
+            </button>
+
+            <button
+              class="office-button"
+              type="button"
+              data-office="aliveriou"
+            >
+              <span>Αλιβερίου</span>
+              <span class="arrow">›</span>
+            </button>
+
+          </div>
+
+          <div class="current-office">
+
+            <div class="current-office-label">
+              Ενεργός χάρτης
+            </div>
+
+            <div
+              class="current-office-name"
+              id="currentOfficeName"
+            >
+              Δασαρχείο Ιστιαίας
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <!-- LAYERS -->
+
+        <section class="sidebar-section">
+
+          <h2 class="section-title">
+            Θεματικά επίπεδα
+          </h2>
+
+          <div class="layer-list-wrapper">
+
+            <arcgis-layer-list
+              id="layerList"
+              reference-element="ddeMap"
+            ></arcgis-layer-list>
+
+          </div>
+
+        </section>
+
+
+        <!-- TOOLS -->
+
+        <section class="sidebar-section">
+
+          <h2 class="section-title">
+            Εργαλεία
+          </h2>
+
+          <div class="tool-list">
+
+            <button
+              class="tool-button disabled"
+              type="button"
+              disabled
+            >
+              <span>
+                <strong>Upload GIS Data</strong>
+                <small>Θα ενεργοποιηθεί στο επόμενο στάδιο</small>
+              </span>
+            </button>
+
+            <button
+              class="tool-button disabled"
+              type="button"
+              disabled
+            >
+              <span>
+                <strong>Επεξεργασία δεδομένων</strong>
+                <small>Θα ενεργοποιηθεί στο επόμενο στάδιο</small>
+              </span>
+            </button>
+
+          </div>
+
+        </section>
+
+
+        <!-- INFO -->
+
+        <section class="sidebar-section">
+
+          <div class="prototype-note">
+            Πιλοτική εφαρμογή για τη δοκιμή διαμοιρασμού,
+            προβολής και διαχείρισης γεωχωρικών δεδομένων
+            της Διεύθυνσης Δασών Ευβοίας.
+          </div>
+
+        </section>
+
+      </aside>
+
+
+      <!-- =====================================================
+           MAP
+      ====================================================== -->
+
+      <section class="map-panel">
+
+        <arcgis-map
+          id="ddeMap"
+          item-id="0f4a6c8d12924d16b7255554e4eef9f9"
+        >
+          <arcgis-zoom slot="top-left"></arcgis-zoom>
+        </arcgis-map>
+
+
+        <div
+          class="loading-overlay"
+          id="loadingOverlay"
+        >
+          <div class="loading-card">
+
+            <div class="spinner"></div>
+
+            <span id="loadingText">
+              Φόρτωση χάρτη...
+            </span>
+
+          </div>
+        </div>
+
+
+        <div class="map-badge">
+          <strong id="mapBadgeOffice">
+            Δασαρχείο Ιστιαίας
+          </strong>
+          · Διεύθυνση Δασών Ευβοίας
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+
+  <!-- =========================================================
+       APPLICATION LOGIC
+  ========================================================== -->
+
+  <script type="module">
+
+    /*
+      ----------------------------------------------------------
+      WEB MAP CONFIGURATION
+      ----------------------------------------------------------
+    */
+
+    const WEB_MAPS = {
+
+      istiaias: {
+        label: "Ιστιαίας",
+        title: "Δασαρχείο Ιστιαίας",
+        itemId: "0f4a6c8d12924d16b7255554e4eef9f9"
+      },
+
+      limnis: {
+        label: "Λίμνης",
+        title: "Δασαρχείο Λίμνης",
+        itemId: "b8c2c95807a74cf688cfdce364d732f1"
+      },
+
+      chalkidas: {
+        label: "Χαλκίδας",
+        title: "Δασαρχείο Χαλκίδας",
+        itemId: "89dd24123e794620a46aad672ae89b58"
+      },
+
+      aliveriou: {
+        label: "Αλιβερίου",
+        title: "Δασαρχείο Αλιβερίου",
+        itemId: "0d593f53db9b4334adc69a40694d10db"
+      }
+
+    };
+
+
+    /*
+      ----------------------------------------------------------
+      ArcGIS class
+      ----------------------------------------------------------
+    */
+
+    const WebMap = await $arcgis.import(
+      "@arcgis/core/WebMap.js"
+    );
+
+
+    /*
+      ----------------------------------------------------------
+      DOM REFERENCES
+      ----------------------------------------------------------
+    */
+
+    const mapElement =
+      document.getElementById("ddeMap");
+
+    const officeButtons =
+      document.querySelectorAll(".office-button");
+
+    const currentOfficeName =
+      document.getElementById("currentOfficeName");
+
+    const mapBadgeOffice =
+      document.getElementById("mapBadgeOffice");
+
+    const loadingOverlay =
+      document.getElementById("loadingOverlay");
+
+    const loadingText =
+      document.getElementById("loadingText");
+
+    const layerList =
+      document.getElementById("layerList");
+
+
+    /*
+      ----------------------------------------------------------
+      Layer List configuration
+      ----------------------------------------------------------
+    */
+
+    await layerList.componentOnReady();
+
+    layerList.showHeading = false;
+    layerList.showFilter = false;
+
+
+    /*
+      ----------------------------------------------------------
+      LOADING INDICATOR
+      ----------------------------------------------------------
+    */
+
+    function showLoading(message) {
+
+      loadingText.textContent =
+        message || "Φόρτωση χάρτη...";
+
+      loadingOverlay.classList.add("visible");
+
+    }
+
+
+    function hideLoading() {
+
+      loadingOverlay.classList.remove("visible");
+
+    }
+
+
+    /*
+      ----------------------------------------------------------
+      ACTIVE OFFICE UI
+      ----------------------------------------------------------
+    */
+
+    function updateOfficeUI(officeKey) {
+
+      const office = WEB_MAPS[officeKey];
+
+      officeButtons.forEach((button) => {
+
+        const isActive =
+          button.dataset.office === officeKey;
+
+        button.classList.toggle(
+          "active",
+          isActive
+        );
+
+        button.setAttribute(
+          "aria-pressed",
+          isActive ? "true" : "false"
+        );
+
+      });
+
+
+      currentOfficeName.textContent =
+        office.title;
+
+      mapBadgeOffice.textContent =
+        office.title;
+
+
+      document.title =
+        `${office.title} | ΔΔ Ευβοίας`;
+
+    }
+
+
+    /*
+      ----------------------------------------------------------
+      CHANGE WEB MAP
+      ----------------------------------------------------------
+    */
+
+    async function loadOfficeMap(officeKey) {
+
+      const office = WEB_MAPS[officeKey];
+
+      if (!office) {
+        return;
+      }
+
+
+      updateOfficeUI(officeKey);
+
+
+      showLoading(
+        `Φόρτωση χάρτη ${office.label}...`
+      );
+
+
+      try {
+
+        /*
+          Create a fresh WebMap object.
+        */
+
+        const webMap =
+          new WebMap({
+
+            portalItem: {
+              id: office.itemId
+            }
+
+          });
+
+
+        /*
+          Load Portal item / WebMap definition first.
+        */
+
+        await webMap.load();
+
+
+        /*
+          Assign the WebMap to the same ArcGIS Map component.
+          Layer List remains connected to ddeMap.
+        */
+
+        mapElement.map = webMap;
+
+
+        /*
+          Wait until the MapView is ready.
+        */
+
+        await mapElement.viewOnReady();
+
+
+        /*
+          Store last selected office locally.
+        */
+
+        localStorage.setItem(
+          "ddEvoiasOffice",
+          officeKey
+        );
+
+
+        /*
+          Update URL without reloading the page.
+
+          Example:
+          ?office=limnis
+        */
+
+        const url =
+          new URL(window.location.href);
+
+        url.searchParams.set(
+          "office",
+          officeKey
+        );
+
+        window.history.replaceState(
+          {},
+          "",
+          url
+        );
+
+
+        hideLoading();
+
+      }
+      catch (error) {
+
+        console.error(
+          "Σφάλμα φόρτωσης Web Map:",
+          error
+        );
+
+
+        loadingText.textContent =
+          "Δεν ήταν δυνατή η φόρτωση του χάρτη.";
+
+      }
+
+    }
+
+
+    /*
+      ----------------------------------------------------------
+      OFFICE BUTTON EVENTS
+      ----------------------------------------------------------
+    */
+
+    officeButtons.forEach((button) => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          const officeKey =
+            button.dataset.office;
+
+          loadOfficeMap(officeKey);
+
+        }
+      );
+
+    });
+
+
+    /*
+      ----------------------------------------------------------
+      INITIAL MAP
+
+      Priority:
+
+      1. URL parameter
+         ?office=chalkidas
+
+      2. Last selection in this browser
+
+      3. Istiaias
+      ----------------------------------------------------------
+    */
+
+    const urlParameters =
+      new URLSearchParams(
+        window.location.search
+      );
+
+
+    const urlOffice =
+      urlParameters.get("office");
+
+
+    const savedOffice =
+      localStorage.getItem(
+        "ddEvoiasOffice"
+      );
+
+
+    let initialOffice =
+      "istiaias";
+
+
+    if (WEB_MAPS[urlOffice]) {
+
+      initialOffice =
+        urlOffice;
+
+    }
+    else if (WEB_MAPS[savedOffice]) {
+
+      initialOffice =
+        savedOffice;
+
+    }
+
+
+    /*
+      If Istiaias is selected, the HTML component
+      already starts with that Web Map.
+
+      We still reload through our common function
+      so that the application starts consistently.
+    */
+
+    loadOfficeMap(initialOffice);
+
+  </script>
+
+</body>
+</html>
