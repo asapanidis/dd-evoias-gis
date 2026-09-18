@@ -2,50 +2,36 @@
 <html lang="el">
 <head>
   <meta charset="utf-8" />
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1"
-  />
-
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>Διεύθυνση Δασών Ευβοίας | GIS</title>
 
-  <script
-    type="module"
-    src="https://js.arcgis.com/5.1/"
-  ></script>
+  <script type="module" src="https://js.arcgis.com/5.1/"></script>
 
   <style>
-
     :root {
       --green-dark: #173f2d;
       --green: #276749;
       --green-soft: #e8f1eb;
       --green-border: #c8d9ce;
-
       --bg: #f4f6f5;
       --panel: #ffffff;
       --text: #1f2933;
       --muted: #66756d;
       --border: #dce4df;
-
+      --danger: #9f2d2d;
+      --danger-soft: #fff3f3;
+      --success: #17653a;
+      --success-soft: #edf8f1;
+      --warning: #7a5a12;
+      --warning-soft: #fff8e8;
       --header-height: 68px;
-      --sidebar-width: 330px;
-
-      font-family:
-        Inter,
-        "Segoe UI",
-        Roboto,
-        Arial,
-        sans-serif;
+      --sidebar-width: 350px;
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
-    html,
-    body {
+    html, body {
       width: 100%;
       height: 100%;
       margin: 0;
@@ -55,9 +41,7 @@
       color: var(--text);
     }
 
-    button {
-      font: inherit;
-    }
+    button, input, select { font: inherit; }
 
     .app {
       width: 100%;
@@ -66,31 +50,21 @@
       grid-template-rows: var(--header-height) 1fr;
     }
 
-    /* =========================================================
-       HEADER
-    ========================================================= */
-
     .app-header {
       min-height: var(--header-height);
-
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 20px;
-
       padding: 0 22px;
-
       background: var(--green-dark);
       color: white;
-
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-
+      box-shadow: 0 2px 8px rgba(0,0,0,.18);
       z-index: 10;
     }
 
     .brand {
       min-width: 0;
-
       display: flex;
       align-items: center;
       gap: 13px;
@@ -100,28 +74,18 @@
       width: 44px;
       height: 44px;
       flex: 0 0 44px;
-
       display: flex;
       align-items: center;
       justify-content: center;
-
-      border: 1px solid rgba(255, 255, 255, 0.45);
+      border: 1px solid rgba(255,255,255,.45);
       border-radius: 9px;
-
-      background: rgba(255, 255, 255, 0.1);
-
+      background: rgba(255,255,255,.1);
       font-size: 14px;
       font-weight: 750;
-      letter-spacing: 0.04em;
-    }
-
-    .brand-text {
-      min-width: 0;
+      letter-spacing: .04em;
     }
 
     .brand-title {
-      margin: 0;
-
       font-size: 18px;
       line-height: 1.2;
       font-weight: 700;
@@ -129,12 +93,9 @@
 
     .brand-subtitle {
       margin-top: 3px;
-
       font-size: 12px;
       line-height: 1.2;
-
-      color: rgba(255, 255, 255, 0.78);
-
+      color: rgba(255,255,255,.78);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -142,1079 +103,1403 @@
 
     .header-status {
       flex: 0 0 auto;
-
       display: flex;
       align-items: center;
       gap: 8px;
-
       padding: 7px 11px;
-
       border-radius: 16px;
-
-      background: rgba(255, 255, 255, 0.1);
-
+      background: rgba(255,255,255,.1);
       font-size: 12px;
-
-      color: rgba(255, 255, 255, 0.9);
+      color: rgba(255,255,255,.9);
     }
 
     .status-dot {
       width: 8px;
       height: 8px;
-
       border-radius: 50%;
-
       background: #7ee2a8;
     }
 
-    /* =========================================================
-       MAIN
-    ========================================================= */
-
     .workspace {
       min-height: 0;
-
       display: grid;
-
-      grid-template-columns:
-        var(--sidebar-width)
-        minmax(0, 1fr);
+      grid-template-columns: var(--sidebar-width) minmax(0,1fr);
     }
-
-    /* =========================================================
-       SIDEBAR
-    ========================================================= */
 
     .sidebar {
       min-height: 0;
-
       overflow-y: auto;
-
       background: var(--panel);
-
       border-right: 1px solid var(--border);
     }
 
     .sidebar-section {
       padding: 18px;
-
       border-bottom: 1px solid var(--border);
     }
 
-    .sidebar-section:last-child {
-      border-bottom: 0;
-    }
+    .sidebar-section:last-child { border-bottom: 0; }
 
     .section-title {
-      margin: 0 0 12px 0;
-
+      margin: 0 0 12px;
       font-size: 12px;
       font-weight: 750;
-
-      letter-spacing: 0.055em;
-
+      letter-spacing: .055em;
       text-transform: uppercase;
-
       color: var(--muted);
     }
 
-    /* =========================================================
-       OFFICE BUTTONS
-    ========================================================= */
-
-    .office-list {
+    .office-list, .tool-list {
       display: grid;
       gap: 8px;
     }
 
-    .office-button {
+    .office-button, .tool-button {
       width: 100%;
       min-height: 45px;
-
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-
       padding: 10px 12px;
-
       border: 1px solid var(--border);
       border-radius: 8px;
-
       background: white;
       color: var(--text);
-
       text-align: left;
-
-      cursor: pointer;
-
-      transition:
-        border-color 0.15s ease,
-        background-color 0.15s ease,
-        transform 0.05s ease;
     }
 
-    .office-button:hover {
-      border-color: var(--green);
+    .office-button, .tool-button.active-tool { cursor: pointer; }
 
+    .office-button:hover, .tool-button.active-tool:hover {
+      border-color: var(--green);
       background: #f8fbf9;
     }
 
-    .office-button:active {
-      transform: translateY(1px);
-    }
-
-    .office-button.active {
+    .office-button.active, .tool-button.open {
       border-color: var(--green);
-
       background: var(--green-soft);
-
       color: var(--green-dark);
-
       font-weight: 650;
     }
 
-    .office-button .arrow {
-      color: var(--muted);
-
-      font-size: 16px;
-    }
-
-    .office-button.active .arrow {
-      color: var(--green);
-    }
-
-    /* =========================================================
-       CURRENT OFFICE
-    ========================================================= */
-
-    .current-office {
-      margin-top: 12px;
-
-      padding: 10px 12px;
-
-      border: 1px solid var(--green-border);
-      border-radius: 8px;
-
-      background: #f6faf7;
-    }
-
-    .current-office-label {
-      margin-bottom: 3px;
-
-      font-size: 11px;
-
-      color: var(--muted);
-    }
-
-    .current-office-name {
-      font-size: 14px;
-      font-weight: 700;
-
-      color: var(--green-dark);
-    }
-
-    /* =========================================================
-       LAYER LIST
-    ========================================================= */
-
-    .layer-list-wrapper {
-      min-height: 180px;
-    }
-
-    arcgis-layer-list {
-      width: 100%;
-
-      display: block;
-    }
-
-    /* =========================================================
-       TOOLS
-    ========================================================= */
-
-    .tool-list {
-      display: grid;
-      gap: 8px;
-    }
-
-    .tool-button {
-      width: 100%;
-      min-height: 46px;
-
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-
-      padding: 9px 12px;
-
-      border: 1px solid var(--border);
-      border-radius: 8px;
-
-      background: white;
-
-      color: var(--text);
-
-      text-align: left;
-    }
+    .office-button .arrow { color: var(--muted); font-size: 16px; }
+    .office-button.active .arrow { color: var(--green); }
 
     .tool-button strong {
       display: block;
-
       font-size: 13px;
       font-weight: 650;
     }
 
     .tool-button small {
       display: block;
-
       margin-top: 2px;
-
       font-size: 11px;
-
       color: var(--muted);
     }
 
     .tool-button.disabled {
-      opacity: 0.58;
-
+      opacity: .52;
       cursor: not-allowed;
+    }
+
+    .current-office {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--green-border);
+      border-radius: 8px;
+      background: #f6faf7;
+    }
+
+    .current-office-label {
+      margin-bottom: 3px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .current-office-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--green-dark);
+    }
+
+    .layer-list-wrapper { min-height: 170px; }
+    arcgis-layer-list { width: 100%; display: block; }
+
+    .upload-panel {
+      display: none;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .upload-panel.visible { display: block; }
+
+    .form-group { margin-bottom: 12px; }
+
+    .form-label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .form-control {
+      width: 100%;
+      min-height: 39px;
+      padding: 8px 9px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: white;
+      color: var(--text);
+    }
+
+    .file-input {
+      width: 100%;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .upload-office {
+      padding: 9px 10px;
+      border: 1px solid var(--green-border);
+      border-radius: 7px;
+      background: #f6faf7;
+      font-size: 12px;
+    }
+
+    .upload-office strong { color: var(--green-dark); }
+
+    .hint {
+      margin-top: 5px;
+      font-size: 10.5px;
+      line-height: 1.4;
+      color: var(--muted);
+    }
+
+    .preview-card {
+      display: none;
+      margin: 10px 0 12px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: #fafcfb;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .preview-card.visible { display: block; }
+
+    .preview-row {
+      display: grid;
+      grid-template-columns: 92px minmax(0,1fr);
+      gap: 7px;
+      margin-bottom: 4px;
+    }
+
+    .preview-row:last-child { margin-bottom: 0; }
+    .preview-key { color: var(--muted); }
+    .preview-value { font-weight: 600; overflow-wrap: anywhere; }
+
+    .status-box {
+      display: none;
+      margin-top: 10px;
+      padding: 9px 10px;
+      border-radius: 7px;
+      font-size: 11px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .status-box.visible { display: block; }
+    .status-box.info { background: #f0f5fa; border: 1px solid #cbd9e6; color: #2f526f; }
+    .status-box.success { background: var(--success-soft); border: 1px solid #bcdcc8; color: var(--success); }
+    .status-box.warning { background: var(--warning-soft); border: 1px solid #e8d69f; color: var(--warning); }
+    .status-box.error { background: var(--danger-soft); border: 1px solid #e5bcbc; color: var(--danger); }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .primary-button, .secondary-button {
+      min-height: 40px;
+      border-radius: 7px;
+      padding: 8px 11px;
+      cursor: pointer;
+      font-weight: 650;
+      font-size: 12px;
+    }
+
+    .primary-button {
+      border: 1px solid var(--green);
+      background: var(--green);
+      color: white;
+    }
+
+    .primary-button:disabled {
+      opacity: .48;
+      cursor: not-allowed;
+    }
+
+    .secondary-button {
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--muted);
     }
 
     .prototype-note {
       font-size: 11px;
       line-height: 1.45;
-
       color: var(--muted);
     }
 
-    /* =========================================================
-       MAP
-    ========================================================= */
-
     .map-panel {
       position: relative;
-
       min-width: 0;
       min-height: 0;
-
       overflow: hidden;
-
       background: #dfe6e2;
     }
 
     #ddeMap {
       display: block;
-
       width: 100%;
       height: 100%;
     }
 
     .map-badge {
       position: absolute;
-
       left: 14px;
       bottom: 14px;
-
       z-index: 5;
-
       max-width: calc(100% - 28px);
-
       padding: 8px 11px;
-
-      border: 1px solid rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0,0,0,.08);
       border-radius: 7px;
-
-      background: rgba(255, 255, 255, 0.94);
-
-      box-shadow: 0 2px 7px rgba(0, 0, 0, 0.12);
-
+      background: rgba(255,255,255,.94);
+      box-shadow: 0 2px 7px rgba(0,0,0,.12);
       font-size: 12px;
-
       color: var(--text);
     }
 
-    .map-badge strong {
-      color: var(--green-dark);
-    }
-
-    /* =========================================================
-       LOADING
-    ========================================================= */
+    .map-badge strong { color: var(--green-dark); }
 
     .loading-overlay {
       position: absolute;
-
       inset: 0;
-
       z-index: 8;
-
       display: none;
-
       align-items: center;
       justify-content: center;
-
-      background: rgba(244, 246, 245, 0.68);
-
+      background: rgba(244,246,245,.68);
       backdrop-filter: blur(1px);
     }
 
-    .loading-overlay.visible {
-      display: flex;
-    }
+    .loading-overlay.visible { display: flex; }
 
     .loading-card {
       display: flex;
       align-items: center;
       gap: 12px;
-
       padding: 13px 16px;
-
-      border-radius: 9px;
-
       border: 1px solid var(--border);
-
+      border-radius: 9px;
       background: white;
-
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-
+      box-shadow: 0 4px 16px rgba(0,0,0,.12);
       font-size: 13px;
     }
 
     .spinner {
       width: 19px;
       height: 19px;
-
       border: 3px solid #dbe7df;
       border-top-color: var(--green);
-
       border-radius: 50%;
-
-      animation: spin 0.8s linear infinite;
+      animation: spin .8s linear infinite;
     }
 
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    /* =========================================================
-       RESPONSIVE
-    ========================================================= */
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (max-width: 850px) {
-
-      :root {
-        --sidebar-width: 265px;
-      }
-
-      .brand-title {
-        font-size: 15px;
-      }
-
-      .brand-subtitle {
-        display: none;
-      }
-
-      .header-status {
-        display: none;
-      }
-
+      :root { --sidebar-width: 285px; }
+      .brand-title { font-size: 15px; }
+      .brand-subtitle, .header-status { display: none; }
     }
 
     @media (max-width: 620px) {
-
-      :root {
-        --header-height: 58px;
-      }
-
-      .app-header {
-        padding: 0 10px;
-      }
-
-      .brand-mark {
-        width: 38px;
-        height: 38px;
-
-        flex-basis: 38px;
-      }
-
-      .workspace {
-        grid-template-columns:
-          215px
-          minmax(0, 1fr);
-      }
-
-      .sidebar-section {
-        padding: 12px;
-      }
-
+      :root { --header-height: 58px; }
+      .app-header { padding: 0 10px; }
+      .brand-mark { width: 38px; height: 38px; flex-basis: 38px; }
+      .workspace { grid-template-columns: 225px minmax(0,1fr); }
+      .sidebar-section { padding: 12px; }
     }
-
   </style>
 </head>
 
 <body>
-
   <div class="app">
 
     <header class="app-header">
-
       <div class="brand">
-
-        <div class="brand-mark">
-          ΔΔ
+        <div class="brand-mark">ΔΔ</div>
+        <div>
+          <div class="brand-title">Διεύθυνση Δασών Ευβοίας</div>
+          <div class="brand-subtitle">Πιλοτικό Σύστημα Γεωχωρικών Δεδομένων</div>
         </div>
-
-        <div class="brand-text">
-
-          <div class="brand-title">
-            Διεύθυνση Δασών Ευβοίας
-          </div>
-
-          <div class="brand-subtitle">
-            Πιλοτικό Σύστημα Γεωχωρικών Δεδομένων
-          </div>
-
-        </div>
-
       </div>
 
       <div class="header-status">
-
         <span class="status-dot"></span>
-
-        <span>
-          Περιβάλλον δοκιμών
-        </span>
-
+        <span>Περιβάλλον δοκιμών</span>
       </div>
-
     </header>
-
 
     <main class="workspace">
 
       <aside class="sidebar">
 
         <section class="sidebar-section">
-
-          <h2 class="section-title">
-            Δασαρχείο
-          </h2>
+          <h2 class="section-title">Δασαρχείο</h2>
 
           <div class="office-list">
-
-            <button
-              class="office-button active"
-              type="button"
-              data-office="istiaias"
-            >
-              <span>
-                Ιστιαίας
-              </span>
-
-              <span class="arrow">
-                ›
-              </span>
+            <button class="office-button active" type="button" data-office="istiaias">
+              <span>Ιστιαίας</span><span class="arrow">›</span>
             </button>
-
-
-            <button
-              class="office-button"
-              type="button"
-              data-office="limnis"
-            >
-              <span>
-                Λίμνης
-              </span>
-
-              <span class="arrow">
-                ›
-              </span>
+            <button class="office-button" type="button" data-office="limnis">
+              <span>Λίμνης</span><span class="arrow">›</span>
             </button>
-
-
-            <button
-              class="office-button"
-              type="button"
-              data-office="chalkidas"
-            >
-              <span>
-                Χαλκίδας
-              </span>
-
-              <span class="arrow">
-                ›
-              </span>
+            <button class="office-button" type="button" data-office="chalkidas">
+              <span>Χαλκίδας</span><span class="arrow">›</span>
             </button>
-
-
-            <button
-              class="office-button"
-              type="button"
-              data-office="aliveriou"
-            >
-              <span>
-                Αλιβερίου
-              </span>
-
-              <span class="arrow">
-                ›
-              </span>
+            <button class="office-button" type="button" data-office="aliveriou">
+              <span>Αλιβερίου</span><span class="arrow">›</span>
             </button>
-
           </div>
-
 
           <div class="current-office">
-
-            <div class="current-office-label">
-              Ενεργός χάρτης
-            </div>
-
-            <div
-              class="current-office-name"
-              id="currentOfficeName"
-            >
-              Δασαρχείο Ιστιαίας
-            </div>
-
+            <div class="current-office-label">Ενεργός χάρτης</div>
+            <div class="current-office-name" id="currentOfficeName">Δασαρχείο Ιστιαίας</div>
           </div>
-
         </section>
 
-
         <section class="sidebar-section">
-
-          <h2 class="section-title">
-            Θεματικά επίπεδα
-          </h2>
-
+          <h2 class="section-title">Θεματικά επίπεδα</h2>
           <div class="layer-list-wrapper">
-
-            <arcgis-layer-list
-              id="layerList"
-              reference-element="ddeMap"
-            ></arcgis-layer-list>
-
+            <arcgis-layer-list id="layerList" reference-element="ddeMap"></arcgis-layer-list>
           </div>
-
         </section>
 
-
         <section class="sidebar-section">
-
-          <h2 class="section-title">
-            Εργαλεία
-          </h2>
+          <h2 class="section-title">Εργαλεία</h2>
 
           <div class="tool-list">
-
-            <button
-              class="tool-button disabled"
-              type="button"
-              disabled
-            >
-
+            <button class="tool-button active-tool" id="uploadToolButton" type="button">
               <span>
-
-                <strong>
-                  Upload GIS Data
-                </strong>
-
-                <small>
-                  Θα ενεργοποιηθεί στο επόμενο στάδιο
-                </small>
-
+                <strong>Upload GIS Data</strong>
+                <small>Shapefile ZIP / GeoJSON</small>
               </span>
-
+              <span class="arrow">›</span>
             </button>
 
-
-            <button
-              class="tool-button disabled"
-              type="button"
-              disabled
-            >
-
+            <button class="tool-button disabled" type="button" disabled>
               <span>
-
-                <strong>
-                  Επεξεργασία δεδομένων
-                </strong>
-
-                <small>
-                  Θα ενεργοποιηθεί στο επόμενο στάδιο
-                </small>
-
+                <strong>Επεξεργασία δεδομένων</strong>
+                <small>Θα ενεργοποιηθεί σε επόμενο στάδιο</small>
               </span>
-
             </button>
-
           </div>
 
+          <div class="upload-panel" id="uploadPanel">
+
+            <div class="form-group">
+              <label class="form-label">Ενεργό Δασαρχείο</label>
+              <div class="upload-office">
+                Η εισαγωγή θα γίνει στο <strong id="uploadOfficeName">Ιστιαίας</strong>
+              </div>
+              <div class="hint">
+                Το DASARXEIO του αρχείου δεν χρησιμοποιείται. Η εφαρμογή επιβάλλει την τιμή του ενεργού Δασαρχείου.
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="targetLayerSelect">Layer προορισμού</label>
+              <select class="form-control" id="targetLayerSelect">
+                <option value="0">KERAIES — Polygon</option>
+                <option value="1">PRAXEIS_2B — Polygon</option>
+                <option value="2">Dasologio — Polygon</option>
+                <option value="3">KTINOTROFIKA — Polygon</option>
+                <option value="4">AN_2026 — Polygon</option>
+                <option value="5">AR_AN_2026 — Polygon</option>
+                <option value="6">Monopatia_Evoias — Polyline</option>
+                <option value="10">Egkriseis_epemvasis_3_2 — Polygon</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="gisFileInput">Αρχείο</label>
+              <input
+                class="file-input"
+                id="gisFileInput"
+                type="file"
+                accept=".zip,.geojson,.json"
+              />
+              <div class="hint">
+                ZIP Shapefile: .shp + .shx + .dbf + .prj και, όπου υπάρχει, .cpg. GeoJSON: WGS84 / EPSG:4326.
+              </div>
+            </div>
+
+            <div class="preview-card" id="previewCard">
+              <div class="preview-row">
+                <div class="preview-key">Αρχείο</div>
+                <div class="preview-value" id="previewFile">—</div>
+              </div>
+              <div class="preview-row">
+                <div class="preview-key">Features</div>
+                <div class="preview-value" id="previewCount">—</div>
+              </div>
+              <div class="preview-row">
+                <div class="preview-key">Geometry</div>
+                <div class="preview-value" id="previewGeometry">—</div>
+              </div>
+              <div class="preview-row">
+                <div class="preview-key">Πεδία</div>
+                <div class="preview-value" id="previewFields">—</div>
+              </div>
+              <div class="preview-row">
+                <div class="preview-key">DASARXEIO</div>
+                <div class="preview-value" id="previewDasarxeio">—</div>
+              </div>
+            </div>
+
+            <div class="status-box" id="uploadStatus"></div>
+
+            <div class="action-row">
+              <button class="primary-button" id="uploadButton" type="button" disabled>
+                Εισαγωγή
+              </button>
+              <button class="secondary-button" id="clearUploadButton" type="button">
+                Καθαρισμός
+              </button>
+            </div>
+
+          </div>
         </section>
 
-
         <section class="sidebar-section">
-
           <div class="prototype-note">
-
-            Πιλοτική εφαρμογή για τη δοκιμή διαμοιρασμού,
-            προβολής και διαχείρισης γεωχωρικών δεδομένων
-            της Διεύθυνσης Δασών Ευβοίας.
-
+            Πιλοτική εφαρμογή για τη δοκιμή διαμοιρασμού, προβολής και διαχείρισης γεωχωρικών δεδομένων της Διεύθυνσης Δασών Ευβοίας.
           </div>
-
         </section>
 
       </aside>
 
-
       <section class="map-panel">
-
-        <!--
-          Αρχικός χάρτης:
-          ΔΑΣΑΡΧΕΙΟ ΙΣΤΙΑΙΑΣ
-        -->
 
         <arcgis-map
           id="ddeMap"
           item-id="0d593f53db9b4334adc69a40694d10db"
         >
-
-          <arcgis-zoom
-            slot="top-left"
-          ></arcgis-zoom>
-
+          <arcgis-zoom slot="top-left"></arcgis-zoom>
         </arcgis-map>
 
-
-        <div
-          class="loading-overlay"
-          id="loadingOverlay"
-        >
-
+        <div class="loading-overlay" id="loadingOverlay">
           <div class="loading-card">
-
             <div class="spinner"></div>
-
-            <span id="loadingText">
-              Φόρτωση χάρτη...
-            </span>
-
+            <span id="loadingText">Φόρτωση χάρτη...</span>
           </div>
-
         </div>
 
-
         <div class="map-badge">
-
-          <strong id="mapBadgeOffice">
-            Δασαρχείο Ιστιαίας
-          </strong>
-
+          <strong id="mapBadgeOffice">Δασαρχείο Ιστιαίας</strong>
           · Διεύθυνση Δασών Ευβοίας
-
         </div>
 
       </section>
 
     </main>
-
   </div>
 
-
   <script type="module">
+    import shp from "https://unpkg.com/shpjs@6.2.0/dist/shp.esm.js";
 
-  /* =========================================================
-     WEB MAPS
-  ========================================================= */
-
-  const WEB_MAPS = {
-
-    istiaias: {
-      label: "Ιστιαίας",
-      title: "Δασαρχείο Ιστιαίας",
-      itemId: "0d593f53db9b4334adc69a40694d10db"
-    },
-
-    limnis: {
-      label: "Λίμνης",
-      title: "Δασαρχείο Λίμνης",
-      itemId: "89dd24123e794620a46aad672ae89b58"
-    },
-
-    chalkidas: {
-      label: "Χαλκίδας",
-      title: "Δασαρχείο Χαλκίδας",
-      itemId: "b8c2c95807a74cf688cfdce364d732f1"
-    },
-
-    aliveriou: {
-      label: "Αλιβερίου",
-      title: "Δασαρχείο Αλιβερίου",
-      itemId: "0f4a6c8d12924d16b7255554e4eef9f9"
-    }
-
-  };
-
-
-  /* =========================================================
-     ARCGIS
-  ========================================================= */
-
-  const WebMap =
-    await $arcgis.import(
-      "@arcgis/core/WebMap.js"
-    );
-
-
-  /* =========================================================
-     DOM
-  ========================================================= */
-
-  const mapElement =
-    document.getElementById(
-      "ddeMap"
-    );
-
-  const officeButtons =
-    document.querySelectorAll(
-      ".office-button"
-    );
-
-  const currentOfficeName =
-    document.getElementById(
-      "currentOfficeName"
-    );
-
-  const mapBadgeOffice =
-    document.getElementById(
-      "mapBadgeOffice"
-    );
-
-  const loadingOverlay =
-    document.getElementById(
-      "loadingOverlay"
-    );
-
-  const loadingText =
-    document.getElementById(
-      "loadingText"
-    );
-
-  const layerList =
-    document.getElementById(
-      "layerList"
-    );
-
-
-  /* =========================================================
-     LAYER LIST
-  ========================================================= */
-
-  await layerList.componentOnReady();
-
-  layerList.showHeading = false;
-  layerList.showFilter = false;
-
-
-  /* =========================================================
-     LOADING
-  ========================================================= */
-
-  function showLoading(message) {
-
-    loadingText.textContent =
-      message || "Φόρτωση χάρτη...";
-
-    loadingOverlay.classList.add(
-      "visible"
-    );
-
-  }
-
-
-  function hideLoading() {
-
-    loadingOverlay.classList.remove(
-      "visible"
-    );
-
-  }
-
-
-  /* =========================================================
-     UI
-  ========================================================= */
-
-  function updateOfficeUI(officeKey) {
-
-    const office =
-      WEB_MAPS[officeKey];
-
-
-    officeButtons.forEach(
-      (button) => {
-
-        const isActive =
-          button.dataset.office ===
-          officeKey;
-
-        button.classList.toggle(
-          "active",
-          isActive
-        );
-
-        button.setAttribute(
-          "aria-pressed",
-          isActive
-            ? "true"
-            : "false"
-        );
-
+    const WEB_MAPS = {
+      istiaias: {
+        label: "Ιστιαίας",
+        title: "Δασαρχείο Ιστιαίας",
+        canonical: "Ιστιαίας",
+        itemId: "0d593f53db9b4334adc69a40694d10db",
+        serviceUrl: "https://services6.arcgis.com/GAyN9WJ2dkh4VWJ1/arcgis/rest/services/DdeSpatial2026_20260913_2308_WFL_VW_ISTIAIAS/FeatureServer"
+      },
+      limnis: {
+        label: "Λίμνης",
+        title: "Δασαρχείο Λίμνης",
+        canonical: "Λίμνης",
+        itemId: "89dd24123e794620a46aad672ae89b58",
+        serviceUrl: "https://services6.arcgis.com/GAyN9WJ2dkh4VWJ1/arcgis/rest/services/DdeSpatial2026_20260913_2308_WFL_VW_LIMNIS/FeatureServer"
+      },
+      chalkidas: {
+        label: "Χαλκίδας",
+        title: "Δασαρχείο Χαλκίδας",
+        canonical: "Χαλκίδας",
+        itemId: "b8c2c95807a74cf688cfdce364d732f1",
+        serviceUrl: "https://services6.arcgis.com/GAyN9WJ2dkh4VWJ1/arcgis/rest/services/DdeSpatial2026_20260913_2308_WFL_VW_CHALKIDAS/FeatureServer"
+      },
+      aliveriou: {
+        label: "Αλιβερίου",
+        title: "Δασαρχείο Αλιβερίου",
+        canonical: "Αλιβερίου",
+        itemId: "0f4a6c8d12924d16b7255554e4eef9f9",
+        serviceUrl: "https://services6.arcgis.com/GAyN9WJ2dkh4VWJ1/arcgis/rest/services/DdeSpatial2026_20260913_2308_WFL_VW_ALIVERIOU/FeatureServer"
       }
-    );
+    };
 
+    const TARGET_LAYERS = {
+      0:  { name: "KERAIES", geometry: "polygon" },
+      1:  { name: "PRAXEIS_2B", geometry: "polygon" },
+      2:  { name: "Dasologio", geometry: "polygon" },
+      3:  { name: "KTINOTROFIKA", geometry: "polygon" },
+      4:  { name: "AN_2026", geometry: "polygon" },
+      5:  { name: "AR_AN_2026", geometry: "polygon" },
+      6:  { name: "Monopatia_Evoias", geometry: "polyline" },
+      10: { name: "Egkriseis_epemvasis_3_2", geometry: "polygon" }
+    };
 
-    currentOfficeName.textContent =
-      office.title;
+    const [
+      WebMap,
+      FeatureLayer,
+      Graphic,
+      SpatialReference,
+      Point,
+      Multipoint,
+      Polyline,
+      Polygon,
+      projectOperator,
+      simplifyOperator
+    ] = await Promise.all([
+      $arcgis.import("@arcgis/core/WebMap.js"),
+      $arcgis.import("@arcgis/core/layers/FeatureLayer.js"),
+      $arcgis.import("@arcgis/core/Graphic.js"),
+      $arcgis.import("@arcgis/core/geometry/SpatialReference.js"),
+      $arcgis.import("@arcgis/core/geometry/Point.js"),
+      $arcgis.import("@arcgis/core/geometry/Multipoint.js"),
+      $arcgis.import("@arcgis/core/geometry/Polyline.js"),
+      $arcgis.import("@arcgis/core/geometry/Polygon.js"),
+      $arcgis.import("@arcgis/core/geometry/operators/projectOperator.js"),
+      $arcgis.import("@arcgis/core/geometry/operators/simplifyOperator.js")
+    ]);
 
-    mapBadgeOffice.textContent =
-      office.title;
+    const SR_WGS84 = new SpatialReference({ wkid: 4326 });
+    const SR_EGSA87 = new SpatialReference({ wkid: 2100 });
 
-    document.title =
-      `${office.title} | ΔΔ Ευβοίας`;
+    const mapElement = document.getElementById("ddeMap");
+    const layerList = document.getElementById("layerList");
+    const officeButtons = document.querySelectorAll(".office-button");
+    const currentOfficeName = document.getElementById("currentOfficeName");
+    const mapBadgeOffice = document.getElementById("mapBadgeOffice");
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    const loadingText = document.getElementById("loadingText");
 
-  }
+    const uploadToolButton = document.getElementById("uploadToolButton");
+    const uploadPanel = document.getElementById("uploadPanel");
+    const uploadOfficeName = document.getElementById("uploadOfficeName");
+    const targetLayerSelect = document.getElementById("targetLayerSelect");
+    const gisFileInput = document.getElementById("gisFileInput");
+    const previewCard = document.getElementById("previewCard");
+    const previewFile = document.getElementById("previewFile");
+    const previewCount = document.getElementById("previewCount");
+    const previewGeometry = document.getElementById("previewGeometry");
+    const previewFields = document.getElementById("previewFields");
+    const previewDasarxeio = document.getElementById("previewDasarxeio");
+    const uploadStatus = document.getElementById("uploadStatus");
+    const uploadButton = document.getElementById("uploadButton");
+    const clearUploadButton = document.getElementById("clearUploadButton");
 
+    let currentOfficeKey = "istiaias";
+    let parsedGeoJSON = null;
+    let parsedGeometryFamily = null;
+    let selectedFileName = null;
+    let uploadInProgress = false;
 
-  /* =========================================================
-     LOAD OFFICE WEB MAP
-  ========================================================= */
+    await layerList.componentOnReady();
+    layerList.showHeading = false;
+    layerList.showFilter = false;
 
-  async function loadOfficeMap(
-    officeKey
-  ) {
-
-    const office =
-      WEB_MAPS[officeKey];
-
-
-    if (!office) {
-      return;
+    function showLoading(message) {
+      loadingText.textContent = message || "Φόρτωση χάρτη...";
+      loadingOverlay.classList.add("visible");
     }
 
+    function hideLoading() {
+      loadingOverlay.classList.remove("visible");
+    }
 
-    updateOfficeUI(
-      officeKey
-    );
+    function setUploadStatus(type, message) {
+      uploadStatus.className = `status-box visible ${type}`;
+      uploadStatus.textContent = message;
+    }
 
+    function clearUploadStatus() {
+      uploadStatus.className = "status-box";
+      uploadStatus.textContent = "";
+    }
 
-    showLoading(
-      `Φόρτωση χάρτη ${office.label}...`
-    );
+    function updateOfficeUI(officeKey) {
+      const office = WEB_MAPS[officeKey];
+      currentOfficeKey = officeKey;
 
+      officeButtons.forEach((button) => {
+        const active = button.dataset.office === officeKey;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+      });
 
-    try {
+      currentOfficeName.textContent = office.title;
+      mapBadgeOffice.textContent = office.title;
+      uploadOfficeName.textContent = office.canonical;
+      document.title = `${office.title} | ΔΔ Ευβοίας`;
+    }
 
-      /*
-        Δημιουργία του αντίστοιχου Web Map.
-      */
+    async function loadOfficeMap(officeKey) {
+      const office = WEB_MAPS[officeKey];
+      if (!office) return;
 
-      const webMap =
-        new WebMap({
+      updateOfficeUI(officeKey);
+      showLoading(`Φόρτωση χάρτη ${office.label}...`);
 
-          portalItem: {
-            id: office.itemId
-          }
-
+      try {
+        const webMap = new WebMap({
+          portalItem: { id: office.itemId }
         });
 
+        await webMap.load();
+        mapElement.map = webMap;
+        await mapElement.viewOnReady();
 
-      /*
-        Φόρτωση του Web Map μαζί με τις
-        αποθηκευμένες αρχικές ιδιότητες θέασης.
-      */
+        const initialViewpoint = webMap.initialViewProperties?.viewpoint;
+        if (initialViewpoint) {
+          await mapElement.goTo(initialViewpoint, { animate: false });
+        }
 
-      await webMap.load();
+        localStorage.setItem("ddEvoiasOffice", officeKey);
 
+        const url = new URL(window.location.href);
+        url.searchParams.set("office", officeKey);
+        window.history.replaceState({}, "", url);
 
-      /*
-        Αντικατάσταση του χάρτη στο υπάρχον
-        ArcGIS map component.
-      */
+        hideLoading();
+      } catch (error) {
+        console.error("Σφάλμα φόρτωσης Web Map:", error);
+        loadingText.textContent = "Δεν ήταν δυνατή η φόρτωση του χάρτη.";
+      }
+    }
 
-      mapElement.map =
-        webMap;
+    officeButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        if (uploadInProgress) return;
+        loadOfficeMap(button.dataset.office);
+      });
+    });
 
+    uploadToolButton.addEventListener("click", () => {
+      const visible = uploadPanel.classList.toggle("visible");
+      uploadToolButton.classList.toggle("open", visible);
+    });
 
-      /*
-        Περιμένουμε να είναι έτοιμο το MapView.
-      */
+    function clearUpload() {
+      parsedGeoJSON = null;
+      parsedGeometryFamily = null;
+      selectedFileName = null;
+      gisFileInput.value = "";
+      previewCard.classList.remove("visible");
+      previewFile.textContent = "—";
+      previewCount.textContent = "—";
+      previewGeometry.textContent = "—";
+      previewFields.textContent = "—";
+      previewDasarxeio.textContent = "—";
+      uploadButton.disabled = true;
+      uploadButton.textContent = "Εισαγωγή";
+      clearUploadStatus();
+    }
 
-      await mapElement.viewOnReady();
+    clearUploadButton.addEventListener("click", clearUpload);
 
+    function normalizeFeatureCollection(data) {
+      if (!data) throw new Error("Το αρχείο δεν περιέχει αναγνώσιμα γεωχωρικά δεδομένα.");
 
-      /*
-        ΣΗΜΑΝΤΙΚΟ:
-
-        Εφαρμόζουμε το αρχικό Viewpoint που είναι
-        αποθηκευμένο στο συγκεκριμένο Web Map.
-
-        Έτσι κάθε Δασαρχείο ανοίγει στο δικό του
-        αποθηκευμένο extent / scale / center.
-      */
-
-      const initialViewpoint =
-        webMap.initialViewProperties
-          ?.viewpoint;
-
-
-      if (initialViewpoint) {
-
-        await mapElement.goTo(
-          initialViewpoint,
-          {
-            animate: false
-          }
+      if (Array.isArray(data)) {
+        const usable = data.filter(
+          (item) => item && item.type === "FeatureCollection" && Array.isArray(item.features)
         );
 
+        if (usable.length === 1) return usable[0];
+
+        if (usable.length > 1) {
+          throw new Error("Το ZIP περιέχει περισσότερα από ένα Shapefiles. Για τη δοκιμή ανέβασε ZIP με ένα μόνο dataset.");
+        }
       }
 
+      if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
+        return data;
+      }
 
-      /*
-        Αποθήκευση τελευταίου επιλεγμένου
-        Δασαρχείου στον browser.
-      */
+      if (data.type === "Feature") {
+        return {
+          type: "FeatureCollection",
+          features: [data]
+        };
+      }
 
-      localStorage.setItem(
-        "ddEvoiasOffice",
-        officeKey
-      );
+      throw new Error("Υποστηρίζεται FeatureCollection / Feature ή ZIP Shapefile.");
+    }
 
+    function geometryFamily(geometryType) {
+      if (!geometryType) return null;
 
-      /*
-        Ενημέρωση URL.
-      */
+      if (geometryType === "Polygon" || geometryType === "MultiPolygon") {
+        return "polygon";
+      }
 
-      const url =
-        new URL(
-          window.location.href
+      if (geometryType === "LineString" || geometryType === "MultiLineString") {
+        return "polyline";
+      }
+
+      if (geometryType === "Point" || geometryType === "MultiPoint") {
+        return "point";
+      }
+
+      return null;
+    }
+
+    function inspectGeometry(features) {
+      const families = new Set();
+
+      for (const feature of features) {
+        if (!feature?.geometry) continue;
+
+        const family = geometryFamily(feature.geometry.type);
+        if (!family) {
+          throw new Error(`Μη υποστηριζόμενος τύπος geometry: ${feature.geometry.type}`);
+        }
+
+        families.add(family);
+      }
+
+      if (families.size === 0) {
+        throw new Error("Δεν βρέθηκαν features με geometry.");
+      }
+
+      if (families.size > 1) {
+        throw new Error("Το αρχείο περιέχει διαφορετικούς τύπους geometry.");
+      }
+
+      return [...families][0];
+    }
+
+    function sourceFields(features) {
+      const fields = new Set();
+
+      for (const feature of features.slice(0, 100)) {
+        Object.keys(feature.properties || {}).forEach((name) => fields.add(name));
+      }
+
+      return [...fields];
+    }
+
+    function sourceDasarxeioValues(features) {
+      const values = new Set();
+
+      for (const feature of features) {
+        const props = feature.properties || {};
+        const key = Object.keys(props).find(
+          (name) => name.toUpperCase() === "DASARXEIO"
         );
 
+        if (!key) continue;
 
-      url.searchParams.set(
-        "office",
-        officeKey
-      );
+        const value = props[key];
+        if (value !== null && value !== undefined && String(value).trim() !== "") {
+          values.add(String(value).trim());
+        }
+      }
 
-
-      window.history.replaceState(
-        {},
-        "",
-        url
-      );
-
-
-      hideLoading();
-
-    }
-    catch (error) {
-
-      console.error(
-        "Σφάλμα φόρτωσης Web Map:",
-        error
-      );
-
-
-      loadingText.textContent =
-        "Δεν ήταν δυνατή η φόρτωση του χάρτη.";
-
+      return [...values];
     }
 
-  }
+    gisFileInput.addEventListener("change", async () => {
+      clearUploadStatus();
+      uploadButton.disabled = true;
+      previewCard.classList.remove("visible");
 
+      const file = gisFileInput.files?.[0];
+      if (!file) {
+        clearUpload();
+        return;
+      }
 
-  /* =========================================================
-     OFFICE BUTTONS
-  ========================================================= */
+      try {
+        setUploadStatus("info", "Ανάγνωση και έλεγχος αρχείου...");
 
-  officeButtons.forEach(
-    (button) => {
+        const extension = file.name.split(".").pop()?.toLowerCase();
+        let parsed;
 
-      button.addEventListener(
-        "click",
-        () => {
+        if (extension === "zip") {
+          parsed = await shp(await file.arrayBuffer());
+        } else if (extension === "geojson" || extension === "json") {
+          parsed = JSON.parse(await file.text());
+        } else {
+          throw new Error("Επίλεξε ZIP Shapefile ή GeoJSON.");
+        }
 
-          const officeKey =
-            button.dataset.office;
+        const featureCollection = normalizeFeatureCollection(parsed);
 
-          loadOfficeMap(
-            officeKey
+        if (featureCollection.features.length === 0) {
+          throw new Error("Το αρχείο δεν περιέχει features.");
+        }
+
+        const family = inspectGeometry(featureCollection.features);
+        const fields = sourceFields(featureCollection.features);
+        const dasarxeia = sourceDasarxeioValues(featureCollection.features);
+
+        parsedGeoJSON = featureCollection;
+        parsedGeometryFamily = family;
+        selectedFileName = file.name;
+
+        previewFile.textContent = file.name;
+        previewCount.textContent = String(featureCollection.features.length);
+        previewGeometry.textContent =
+          family === "polygon" ? "Polygon" :
+          family === "polyline" ? "Polyline" :
+          "Point";
+
+        previewFields.textContent =
+          fields.length ? fields.join(", ") : "Χωρίς περιγραφικά πεδία";
+
+        previewDasarxeio.textContent =
+          dasarxeia.length ? dasarxeia.join(", ") : "Δεν υπάρχει / NULL";
+
+        previewCard.classList.add("visible");
+        uploadButton.disabled = false;
+        uploadButton.textContent = `Εισαγωγή ${featureCollection.features.length} features`;
+
+        const target = TARGET_LAYERS[targetLayerSelect.value];
+        if (target && target.geometry !== family) {
+          setUploadStatus(
+            "warning",
+            `Το αρχείο είναι ${family}, ενώ το επιλεγμένο ${target.name} είναι ${target.geometry}. Επίλεξε συμβατό layer πριν την εισαγωγή.`
+          );
+        } else {
+          setUploadStatus(
+            "success",
+            "Το αρχείο διαβάστηκε. Έτοιμο για έλεγχο πεδίων και εισαγωγή."
+          );
+        }
+      } catch (error) {
+        console.error(error);
+        parsedGeoJSON = null;
+        parsedGeometryFamily = null;
+        selectedFileName = null;
+        uploadButton.disabled = true;
+        setUploadStatus("error", error.message || "Αποτυχία ανάγνωσης αρχείου.");
+      }
+    });
+
+    targetLayerSelect.addEventListener("change", () => {
+      if (!parsedGeoJSON) return;
+
+      const target = TARGET_LAYERS[targetLayerSelect.value];
+
+      if (target.geometry !== parsedGeometryFamily) {
+        setUploadStatus(
+          "warning",
+          `Το αρχείο είναι ${parsedGeometryFamily}, ενώ το ${target.name} απαιτεί ${target.geometry}.`
+        );
+      } else {
+        setUploadStatus(
+          "success",
+          "Ο τύπος geometry είναι συμβατός με το layer προορισμού."
+        );
+      }
+    });
+
+    function signedRingArea(ring) {
+      let area = 0;
+
+      for (let i = 0; i < ring.length - 1; i++) {
+        const [x1, y1] = ring[i];
+        const [x2, y2] = ring[i + 1];
+        area += (x2 - x1) * (y2 + y1);
+      }
+
+      return area;
+    }
+
+    function ensureClosedRing(ring) {
+      if (!ring.length) return ring;
+
+      const first = ring[0];
+      const last = ring[ring.length - 1];
+
+      if (first[0] !== last[0] || first[1] !== last[1]) {
+        return [...ring, [...first]];
+      }
+
+      return ring.map((coord) => [...coord]);
+    }
+
+    function orientRing(ring, clockwise) {
+      const closed = ensureClosedRing(ring);
+      const isClockwise = signedRingArea(closed) > 0;
+
+      if (isClockwise === clockwise) return closed;
+
+      const reversed = [...closed].reverse();
+      return ensureClosedRing(reversed);
+    }
+
+    function polygonRingsFromGeoJSON(geometry) {
+      const rings = [];
+
+      const appendPolygon = (polygonCoordinates) => {
+        polygonCoordinates.forEach((ring, index) => {
+          rings.push(
+            orientRing(
+              ring,
+              index === 0
+            )
+          );
+        });
+      };
+
+      if (geometry.type === "Polygon") {
+        appendPolygon(geometry.coordinates);
+      } else if (geometry.type === "MultiPolygon") {
+        geometry.coordinates.forEach(appendPolygon);
+      }
+
+      return rings;
+    }
+
+    function geoJSONToArcGISGeometry(geometry) {
+      if (!geometry) return null;
+
+      switch (geometry.type) {
+        case "Point":
+          return new Point({
+            x: geometry.coordinates[0],
+            y: geometry.coordinates[1],
+            spatialReference: SR_WGS84
+          });
+
+        case "MultiPoint":
+          return new Multipoint({
+            points: geometry.coordinates,
+            spatialReference: SR_WGS84
+          });
+
+        case "LineString":
+          return new Polyline({
+            paths: [geometry.coordinates],
+            spatialReference: SR_WGS84
+          });
+
+        case "MultiLineString":
+          return new Polyline({
+            paths: geometry.coordinates,
+            spatialReference: SR_WGS84
+          });
+
+        case "Polygon":
+        case "MultiPolygon":
+          return new Polygon({
+            rings: polygonRingsFromGeoJSON(geometry),
+            spatialReference: SR_WGS84
+          });
+
+        default:
+          throw new Error(`Μη υποστηριζόμενο geometry: ${geometry.type}`);
+      }
+    }
+
+    function normalizeFieldName(name) {
+      return String(name || "")
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9Α-ΩΆΈΉΊΌΎΏΪΫ_]/g, "");
+    }
+
+    function buildSourceFieldIndex(properties) {
+      const index = new Map();
+
+      Object.keys(properties || {}).forEach((name) => {
+        index.set(normalizeFieldName(name), name);
+      });
+
+      return index;
+    }
+
+    function findSourceField(targetName, properties) {
+      const sourceIndex = buildSourceFieldIndex(properties);
+      const targetNormalized = normalizeFieldName(targetName);
+
+      if (sourceIndex.has(targetNormalized)) {
+        return sourceIndex.get(targetNormalized);
+      }
+
+      const targetFirst10 = targetNormalized.slice(0, 10);
+      const candidates = [];
+
+      for (const [normalized, original] of sourceIndex.entries()) {
+        if (normalized === targetFirst10) {
+          candidates.push(original);
+        }
+      }
+
+      if (candidates.length === 1) {
+        return candidates[0];
+      }
+
+      return null;
+    }
+
+    function coerceValue(value, field) {
+      if (value === undefined || value === null || value === "") return null;
+
+      const type = field.type;
+
+      if (
+        type === "double" ||
+        type === "single" ||
+        type === "integer" ||
+        type === "small-integer" ||
+        type === "big-integer"
+      ) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number : null;
+      }
+
+      if (type === "date") {
+        if (value instanceof Date) return value.getTime();
+
+        if (typeof value === "number" && Number.isFinite(value)) {
+          return value;
+        }
+
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? null : date.getTime();
+      }
+
+      if (type === "string") {
+        const text = String(value);
+        return field.length ? text.slice(0, field.length) : text;
+      }
+
+      return value;
+    }
+
+    function isSystemOrExcludedField(field) {
+      const name = field.name.toUpperCase();
+
+      if (field.editable === false) return true;
+
+      return [
+        "OBJECTID",
+        "FID",
+        "GLOBALID",
+        "SHAPE",
+        "SHAPE_LENGTH",
+        "SHAPE_AREA",
+        "SHAPE__LENGTH",
+        "SHAPE__AREA",
+        "SOURCE_GID"
+      ].includes(name);
+    }
+
+    function buildAttributes(properties, layerFields, officeCanonical, templateAttributes = {}) {
+      const attributes = { ...templateAttributes };
+
+      for (const field of layerFields) {
+        if (isSystemOrExcludedField(field)) continue;
+
+        if (field.name.toUpperCase() === "DASARXEIO") {
+          attributes[field.name] = officeCanonical;
+          continue;
+        }
+
+        const sourceName = findSourceField(field.name, properties || {});
+        if (!sourceName) continue;
+
+        attributes[field.name] = coerceValue(
+          properties[sourceName],
+          field
+        );
+      }
+
+      attributes.DASARXEIO = officeCanonical;
+
+      delete attributes.OBJECTID;
+      delete attributes.FID;
+      delete attributes.GLOBALID;
+      delete attributes.GlobalID;
+      delete attributes.Shape;
+      delete attributes.SHAPE;
+      delete attributes.Shape__Length;
+      delete attributes.Shape__Area;
+
+      if ("SOURCE_GID" in attributes) {
+        attributes.SOURCE_GID = null;
+      }
+
+      return attributes;
+    }
+
+    function summarizeFieldMapping(layerFields, properties) {
+      const mapped = [];
+      const missing = [];
+
+      for (const field of layerFields) {
+        if (isSystemOrExcludedField(field)) continue;
+        if (field.name.toUpperCase() === "DASARXEIO") continue;
+
+        const sourceName = findSourceField(field.name, properties || {});
+
+        if (sourceName) {
+          mapped.push(
+            sourceName === field.name
+              ? field.name
+              : `${sourceName} → ${field.name}`
+          );
+        } else {
+          missing.push(field.name);
+        }
+      }
+
+      return { mapped, missing };
+    }
+
+    async function prepareGraphic(feature, layerFields, officeCanonical, templateAttributes) {
+      const geometry4326 = geoJSONToArcGISGeometry(feature.geometry);
+
+      if (!geometry4326) {
+        throw new Error("Feature χωρίς geometry.");
+      }
+
+      if (!projectOperator.isLoaded()) {
+        await projectOperator.load();
+      }
+
+      let geometry2100 = projectOperator.execute(
+        geometry4326,
+        SR_EGSA87
+      );
+
+      if (!geometry2100) {
+        throw new Error("Αποτυχία μετασχηματισμού geometry σε EPSG:2100.");
+      }
+
+      if (geometry2100.type === "polygon" || geometry2100.type === "polyline") {
+        geometry2100 = simplifyOperator.execute(geometry2100) || geometry2100;
+      }
+
+      return new Graphic({
+        geometry: geometry2100,
+        attributes: buildAttributes(
+          feature.properties || {},
+          layerFields,
+          officeCanonical,
+          templateAttributes
+        )
+      });
+    }
+
+    async function applyAddsInChunks(layer, graphics, chunkSize = 200) {
+      let successCount = 0;
+      const errors = [];
+
+      for (let start = 0; start < graphics.length; start += chunkSize) {
+        const chunk = graphics.slice(start, start + chunkSize);
+
+        const result = await layer.applyEdits({
+          addFeatures: chunk
+        });
+
+        for (const editResult of result.addFeatureResults || []) {
+          if (editResult.error) {
+            errors.push(
+              editResult.error.message ||
+              JSON.stringify(editResult.error)
+            );
+          } else {
+            successCount += 1;
+          }
+        }
+      }
+
+      return { successCount, errors };
+    }
+
+    function refreshCurrentMapLayers() {
+      try {
+        mapElement.map?.allLayers?.forEach((layer) => {
+          if (typeof layer.refresh === "function") {
+            layer.refresh();
+          }
+        });
+      } catch (error) {
+        console.warn("Δεν ολοκληρώθηκε refresh όλων των layers:", error);
+      }
+    }
+
+    uploadButton.addEventListener("click", async () => {
+      if (!parsedGeoJSON || uploadInProgress) return;
+
+      const office = WEB_MAPS[currentOfficeKey];
+      const layerId = Number(targetLayerSelect.value);
+      const target = TARGET_LAYERS[layerId];
+
+      if (!office || !target) return;
+
+      if (target.geometry !== parsedGeometryFamily) {
+        setUploadStatus(
+          "error",
+          `Ασυμβατό geometry. Το αρχείο είναι ${parsedGeometryFamily}, ενώ το ${target.name} απαιτεί ${target.geometry}.`
+        );
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Να προστεθούν ${parsedGeoJSON.features.length} features στο ${target.name} του Δασαρχείου ${office.canonical};\n\nΗ εγγραφή μέσω του Hosted View ενημερώνει το υποκείμενο Source Hosted Feature Layer.`
+      );
+
+      if (!confirmed) return;
+
+      uploadInProgress = true;
+      uploadButton.disabled = true;
+      clearUploadButton.disabled = true;
+      targetLayerSelect.disabled = true;
+      gisFileInput.disabled = true;
+
+      try {
+        setUploadStatus(
+          "info",
+          `Έλεγχος ${target.name} και προετοιμασία ${parsedGeoJSON.features.length} features...`
+        );
+
+        const layerUrl = `${office.serviceUrl}/${layerId}`;
+
+        const targetLayer = new FeatureLayer({
+          url: layerUrl
+        });
+
+        await targetLayer.load();
+
+        const templateAttributes =
+          targetLayer.templates?.[0]?.prototype?.attributes || {};
+
+        if (targetLayer.geometryType !== target.geometry) {
+          throw new Error(
+            `Το ArcGIS layer δηλώνει geometry ${targetLayer.geometryType}, όχι ${target.geometry}.`
+          );
+        }
+
+        const sampleProperties =
+          parsedGeoJSON.features.find((feature) => feature?.properties)?.properties || {};
+
+        const mapping = summarizeFieldMapping(
+          targetLayer.fields,
+          sampleProperties
+        );
+
+        if (mapping.mapped.length) {
+          console.log("Αντιστοίχιση πεδίων:", mapping.mapped);
+        }
+
+        if (mapping.missing.length) {
+          console.log(
+            "Πεδία στόχου χωρίς αντίστοιχο πεδίο στο αρχείο:",
+            mapping.missing
+          );
+        }
+
+        setUploadStatus(
+          "info",
+          `Μετασχηματισμός σε ΕΓΣΑ '87 και προετοιμασία features...`
+        );
+
+        const graphics = [];
+
+        for (let i = 0; i < parsedGeoJSON.features.length; i++) {
+          const feature = parsedGeoJSON.features[i];
+
+          if (!feature?.geometry) {
+            throw new Error(`Το feature ${i + 1} δεν έχει geometry.`);
+          }
+
+          const graphic = await prepareGraphic(
+            feature,
+            targetLayer.fields,
+            office.canonical,
+            templateAttributes
           );
 
+          graphics.push(graphic);
         }
-      );
 
+        setUploadStatus(
+          "info",
+          `Εισαγωγή ${graphics.length} features στο ${target.name} / ${office.canonical}...`
+        );
+
+        const result = await applyAddsInChunks(
+          targetLayer,
+          graphics
+        );
+
+        refreshCurrentMapLayers();
+
+        if (result.errors.length === 0) {
+          setUploadStatus(
+            "success",
+            `Ολοκληρώθηκε: ${result.successCount}/${graphics.length} features προστέθηκαν στο ${target.name} του Δασαρχείου ${office.canonical}. DASARXEIO = "${office.canonical}".`
+          );
+        } else {
+          setUploadStatus(
+            "warning",
+            `Προστέθηκαν ${result.successCount}/${graphics.length}. Αποτυχίες: ${result.errors.length}. Πρώτο σφάλμα: ${result.errors[0]}`
+          );
+        }
+      } catch (error) {
+        console.error("Upload error:", error);
+        setUploadStatus(
+          "error",
+          error?.message || "Η εισαγωγή απέτυχε."
+        );
+      } finally {
+        uploadInProgress = false;
+        uploadButton.disabled = !parsedGeoJSON;
+        clearUploadButton.disabled = false;
+        targetLayerSelect.disabled = false;
+        gisFileInput.disabled = false;
+      }
+    });
+
+    const urlParameters = new URLSearchParams(window.location.search);
+    const urlOffice = urlParameters.get("office");
+    const savedOffice = localStorage.getItem("ddEvoiasOffice");
+
+    let initialOffice = "istiaias";
+
+    if (urlOffice && WEB_MAPS[urlOffice]) {
+      initialOffice = urlOffice;
+    } else if (savedOffice && WEB_MAPS[savedOffice]) {
+      initialOffice = savedOffice;
     }
-  );
 
-
-  /* =========================================================
-     INITIAL OFFICE
-  ========================================================= */
-
-  const urlParameters =
-    new URLSearchParams(
-      window.location.search
-    );
-
-
-  const urlOffice =
-    urlParameters.get(
-      "office"
-    );
-
-
-  const savedOffice =
-    localStorage.getItem(
-      "ddEvoiasOffice"
-    );
-
-
-  let initialOffice =
-    "istiaias";
-
-
-  if (
-    urlOffice &&
-    WEB_MAPS[urlOffice]
-  ) {
-
-    initialOffice =
-      urlOffice;
-
-  }
-  else if (
-    savedOffice &&
-    WEB_MAPS[savedOffice]
-  ) {
-
-    initialOffice =
-      savedOffice;
-
-  }
-
-
-  loadOfficeMap(
-    initialOffice
-  );
-
-</script>
-
+    loadOfficeMap(initialOffice);
+  </script>
 </body>
 </html>
