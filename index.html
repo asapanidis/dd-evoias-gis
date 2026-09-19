@@ -632,6 +632,95 @@
       min-height: 0;
       overflow: hidden;
       background: #dfe6e2;
+      --attribute-table-height: 42%;
+    }
+
+    .attribute-table-dock {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 18;
+
+      height: var(--attribute-table-height);
+
+      display: none;
+      grid-template-rows: 42px minmax(0, 1fr);
+
+      background: #ffffff;
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -4px 14px rgba(0,0,0,.14);
+    }
+
+    .attribute-table-dock.visible {
+      display: grid;
+    }
+
+    .attribute-table-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+
+      padding: 0 12px;
+
+      border-bottom: 1px solid var(--border);
+      background: #f8faf9;
+    }
+
+    .attribute-table-title {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--green-dark);
+    }
+
+    .attribute-table-title span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .attribute-table-close {
+      width: 32px;
+      height: 30px;
+
+      border: 1px solid var(--border);
+      border-radius: 6px;
+
+      background: white;
+      color: var(--muted);
+
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .attribute-table-close:hover {
+      border-color: var(--green);
+      color: var(--green-dark);
+      background: #f6faf7;
+    }
+
+    .attribute-table-body {
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    #attributeTable {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .map-panel.table-open .map-badge,
+    .map-panel.table-open .keepitgreen-map-link {
+      bottom: calc(var(--attribute-table-height) + 14px);
     }
 
     #ddeMap {
@@ -731,6 +820,10 @@
 
     @media (max-width: 620px) {
       :root { --header-height: 58px; }
+
+      .map-panel {
+        --attribute-table-height: 50%;
+      }
       .app-header { padding: 0 10px; }
       .brand-mark { width: 38px; height: 38px; flex-basis: 38px; }
       .workspace { grid-template-columns: 225px minmax(0,1fr); }
@@ -758,7 +851,7 @@
 
       <div class="header-status">
         <span class="status-dot"></span>
-        <span>Δοκιμαστική Έκδοση v7.1</span>
+        <span>Δοκιμαστική Έκδοση v7.2</span>
       </div>
     </header>
 
@@ -821,6 +914,14 @@
               <span>
                 <strong>Επεξεργασία δεδομένων</strong>
                 <small>Geometry + attributes</small>
+              </span>
+              <span class="arrow">›</span>
+            </button>
+
+            <button class="tool-button active-tool" id="tableToolButton" type="button">
+              <span>
+                <strong>Πίνακας γνωρισμάτων</strong>
+                <small>Attribute table ανά layer</small>
               </span>
               <span class="arrow">›</span>
             </button>
@@ -1046,6 +1147,36 @@
           · Διεύθυνση Δασών Ευβοίας
         </div>
 
+        <div class="attribute-table-dock" id="attributeTableDock">
+
+          <div class="attribute-table-bar">
+            <div class="attribute-table-title">
+              <span>Πίνακας γνωρισμάτων</span>
+              <span>·</span>
+              <span id="attributeTableOffice">Δασαρχείο Ιστιαίας</span>
+            </div>
+
+            <button
+              class="attribute-table-close"
+              id="closeAttributeTableButton"
+              type="button"
+              title="Κλείσιμο πίνακα"
+              aria-label="Κλείσιμο πίνακα γνωρισμάτων"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="attribute-table-body">
+            <arcgis-feature-table
+              id="attributeTable"
+              reference-element="ddeMap"
+              show-layer-dropdown
+            ></arcgis-feature-table>
+          </div>
+
+        </div>
+
       </section>
 
     </main>
@@ -1143,6 +1274,13 @@
     const editOfficeName = document.getElementById("editOfficeName");
     const featureEditor = document.getElementById("featureEditor");
 
+    const tableToolButton = document.getElementById("tableToolButton");
+    const attributeTableDock = document.getElementById("attributeTableDock");
+    const attributeTableOffice = document.getElementById("attributeTableOffice");
+    const closeAttributeTableButton = document.getElementById("closeAttributeTableButton");
+    const attributeTable = document.getElementById("attributeTable");
+    const mapPanel = document.querySelector(".map-panel");
+
     const uploadOfficeName = document.getElementById("uploadOfficeName");
     const targetLayerSelect = document.getElementById("targetLayerSelect");
     const downloadTemplateButton = document.getElementById("downloadTemplateButton");
@@ -1189,6 +1327,10 @@
 
     await featureEditor.componentOnReady();
 
+    await attributeTable.componentOnReady();
+    attributeTable.editingEnabled = false;
+    attributeTable.hideMenuItemsDeleteSelection = true;
+
     function showLoading(message) {
       loadingText.textContent = message || "Φόρτωση χάρτη...";
       loadingOverlay.classList.add("visible");
@@ -1231,6 +1373,8 @@
       mapBadgeOffice.textContent = office.title;
       uploadOfficeName.textContent = office.canonical;
       editOfficeName.textContent = office.canonical;
+      attributeTableOffice.textContent = office.title;
+      attributeTable.tableTitle = `Πίνακας γνωρισμάτων — ${office.canonical}`;
       document.title = `${office.title} | ΔΔ Ευβοίας`;
 
       if (parsedGeoJSON) {
@@ -1256,6 +1400,76 @@
           fieldName: field.name,
           label: field.alias || field.name
         }));
+    }
+
+    async function configureAttributeTableForMap(webMap) {
+      const previousLayerId =
+        attributeTable.layer?.layerId !== undefined
+          ? Number(attributeTable.layer.layerId)
+          : null;
+
+      const featureLayers = webMap.allLayers
+        .toArray()
+        .filter((layer) => layer?.type === "feature")
+        .sort((a, b) => Number(a.layerId) - Number(b.layerId));
+
+      await Promise.all(
+        featureLayers.map(async (layer) => {
+          try {
+            await layer.load();
+          } catch (error) {
+            console.warn("Δεν φορτώθηκε layer για Attribute Table:", layer?.title, error);
+          }
+        })
+      );
+
+      attributeTable.layers = featureLayers;
+      attributeTable.editingEnabled = false;
+      attributeTable.hideMenuItemsDeleteSelection = true;
+
+      const hiddenNames = new Set([
+        "GLOBALID",
+        "SOURCE_GID",
+        "SHAPE__LENGTH",
+        "SHAPE__AREA",
+        "SHAPE_LENGTH",
+        "SHAPE_AREA"
+      ]);
+
+      const preferredLayer =
+        featureLayers.find(
+          (layer) => Number(layer.layerId) === previousLayerId
+        ) || featureLayers[0] || null;
+
+      if (preferredLayer) {
+        attributeTable.layer = preferredLayer;
+
+        const actualHiddenFields = preferredLayer.fields
+          .filter((field) => hiddenNames.has(normalizeFieldName(field.name)))
+          .map((field) => field.name);
+
+        attributeTable.hiddenFields = actualHiddenFields;
+      } else {
+        attributeTable.layer = null;
+      }
+
+      attributeTable.tableTitle =
+        `Πίνακας γνωρισμάτων — ${WEB_MAPS[currentOfficeKey].canonical}`;
+
+      attributeTable.actionColumnConfig = {
+        label: "Μετάβαση στο αντικείμενο",
+        icon: "zoom-to-object",
+        callback: async (event) => {
+          try {
+            await mapElement.goTo(event.feature, {
+              animate: true,
+              duration: 500
+            });
+          } catch (error) {
+            console.warn("Δεν έγινε zoom στο αντικείμενο:", error);
+          }
+        }
+      };
     }
 
     async function configureEditorForMap(webMap) {
@@ -1357,6 +1571,7 @@
         await mapElement.viewOnReady();
 
         await configureEditorForMap(webMap);
+        await configureAttributeTableForMap(webMap);
 
         const initialViewpoint = webMap.initialViewProperties?.viewpoint;
         if (initialViewpoint) {
@@ -1390,6 +1605,29 @@
 
         loadOfficeMap(button.dataset.office);
       });
+    });
+
+    function setAttributeTableOpen(open) {
+      attributeTableDock.classList.toggle("visible", open);
+      mapPanel.classList.toggle("table-open", open);
+      tableToolButton.classList.toggle("open", open);
+
+      if (open) {
+        try {
+          attributeTable.refresh();
+        } catch (error) {
+          console.warn("Δεν έγινε refresh του Attribute Table:", error);
+        }
+      }
+    }
+
+    tableToolButton.addEventListener("click", () => {
+      const open = !attributeTableDock.classList.contains("visible");
+      setAttributeTableOpen(open);
+    });
+
+    closeAttributeTableButton.addEventListener("click", () => {
+      setAttributeTableOpen(false);
     });
 
     uploadToolButton.addEventListener("click", async () => {
