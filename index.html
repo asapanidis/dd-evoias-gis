@@ -758,7 +758,7 @@
 
       <div class="header-status">
         <span class="status-dot"></span>
-        <span>Δοκιμαστική Έκδοση v6</span>
+        <span>Δοκιμαστική Έκδοση v7</span>
       </div>
     </header>
 
@@ -1060,28 +1060,24 @@
         title: "Δασαρχείο Ιστιαίας",
         canonical: "Ιστιαίας",
         itemId: "0d593f53db9b4334adc69a40694d10db",
-        serviceUrl: "https://services6.arcgis.com/GAyN9WJ2dkh4VWJ1/arcgis/rest/services/DdeSpatial2026_20260913_2308_WFL_VW_ISTIAIAS/FeatureServer"
       },
       limnis: {
         label: "Λίμνης",
         title: "Δασαρχείο Λίμνης",
         canonical: "Λίμνης",
         itemId: "89dd24123e794620a46aad672ae89b58",
-        serviceUrl: "https://services6.arcgis.com/GAyN9WJ2dkh4VWJ1/arcgis/rest/services/DdeSpatial2026_20260913_2308_WFL_VW_LIMNIS/FeatureServer"
       },
       chalkidas: {
         label: "Χαλκίδας",
         title: "Δασαρχείο Χαλκίδας",
         canonical: "Χαλκίδας",
         itemId: "b8c2c95807a74cf688cfdce364d732f1",
-        serviceUrl: "https://services6.arcgis.com/GAyN9WJ2dkh4VWJ1/arcgis/rest/services/DdeSpatial2026_20260913_2308_WFL_VW_CHALKIDAS/FeatureServer"
       },
       aliveriou: {
         label: "Αλιβερίου",
         title: "Δασαρχείο Αλιβερίου",
         canonical: "Αλιβερίου",
         itemId: "0f4a6c8d12924d16b7255554e4eef9f9",
-        serviceUrl: "https://services6.arcgis.com/GAyN9WJ2dkh4VWJ1/arcgis/rest/services/DdeSpatial2026_20260913_2308_WFL_VW_ALIVERIOU/FeatureServer"
       }
     };
 
@@ -1098,7 +1094,6 @@
 
     const [
       WebMap,
-      FeatureLayer,
       GraphicsLayer,
       Graphic,
       SpatialReference,
@@ -1110,7 +1105,6 @@
       simplifyOperator
     ] = await Promise.all([
       $arcgis.import("@arcgis/core/WebMap.js"),
-      $arcgis.import("@arcgis/core/layers/FeatureLayer.js"),
       $arcgis.import("@arcgis/core/layers/GraphicsLayer.js"),
       $arcgis.import("@arcgis/core/Graphic.js"),
       $arcgis.import("@arcgis/core/geometry/SpatialReference.js"),
@@ -2121,6 +2115,29 @@
 
     reviewConfirmCheckbox.addEventListener("change", updateUploadButtonState);
 
+    async function getCurrentTargetLayer(layerId) {
+      const webMap = mapElement.map;
+
+      if (!webMap?.allLayers) {
+        throw new Error("Ο ενεργός Web Map δεν είναι διαθέσιμος.");
+      }
+
+      const targetLayer = webMap.allLayers.find(
+        (layer) =>
+          layer?.type === "feature" &&
+          Number(layer.layerId) === Number(layerId)
+      );
+
+      if (!targetLayer) {
+        throw new Error(
+          `Δεν βρέθηκε το layer ID ${layerId} στον ενεργό Web Map.`
+        );
+      }
+
+      await targetLayer.load();
+      return targetLayer;
+    }
+
     async function runUploadReview() {
       clearReview();
 
@@ -2135,9 +2152,7 @@
       setUploadStatus("info", `Έλεγχος schema του ${target.name}...`);
 
       try {
-        const layerUrl = `${office.serviceUrl}/${layerId}`;
-        const targetLayer = new FeatureLayer({ url: layerUrl });
-        await targetLayer.load();
+        const targetLayer = await getCurrentTargetLayer(layerId);
 
         const templateAttributes =
           targetLayer.templates?.[0]?.prototype?.attributes || {};
