@@ -6,6 +6,8 @@
   <title>Διεύθυνση Δασών Ευβοίας | GIS</title>
 
   <script type="module" src="https://js.arcgis.com/5.1/"></script>
+  <script src="https://unpkg.com/@mapbox/shp-write@0.4.3/shpwrite.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
   <style>
     :root {
@@ -223,7 +225,8 @@
       color: var(--muted);
     }
 
-    .tool-button.disabled {
+    .tool-button.disabled,
+    .tool-button:disabled {
       opacity: .52;
       cursor: not-allowed;
     }
@@ -277,6 +280,37 @@
     }
 
     .edit-panel.visible { display: block; }
+
+    .download-data-panel {
+      display: none;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .download-data-panel.visible { display: block; }
+
+    .download-data-info {
+      margin-bottom: 12px;
+      padding: 9px 10px;
+      border: 1px solid #cbd9e6;
+      border-radius: 7px;
+      background: #f0f5fa;
+      color: #2f526f;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .cad-limit-note {
+      margin-top: 8px;
+      padding: 8px 9px;
+      border: 1px solid #e8d69f;
+      border-radius: 7px;
+      background: var(--warning-soft);
+      color: var(--warning);
+      font-size: 10.5px;
+      line-height: 1.4;
+    }
 
     .edit-info {
       margin-bottom: 12px;
@@ -851,7 +885,7 @@
 
       <div class="header-status">
         <span class="status-dot"></span>
-        <span>Δοκιμαστική Έκδοση v7.2</span>
+        <span>Δοκιμαστική Έκδοση v7.3</span>
       </div>
     </header>
 
@@ -860,9 +894,12 @@
       <aside class="sidebar">
 
         <section class="sidebar-section">
-          <h2 class="section-title">Δασαρχείο</h2>
+          <h2 class="section-title">Χάρτης</h2>
 
           <div class="office-list">
+            <button class="office-button" type="button" data-office="diefthynsi">
+              <span>Διεύθυνση Δασών Εύβοιας</span><span class="arrow">›</span>
+            </button>
             <button class="office-button active" type="button" data-office="istiaias">
               <span>Ιστιαίας</span><span class="arrow">›</span>
             </button>
@@ -925,6 +962,14 @@
               </span>
               <span class="arrow">›</span>
             </button>
+
+            <button class="tool-button active-tool" id="downloadDataToolButton" type="button">
+              <span>
+                <strong>Λήψη θεματικού επιπέδου</strong>
+                <small>Shapefile / GeoJSON / DXF / DWG</small>
+              </span>
+              <span class="arrow">›</span>
+            </button>
           </div>
 
           <div class="temp-panel" id="tempPanel">
@@ -940,10 +985,11 @@
                 class="file-input"
                 id="tempFileInput"
                 type="file"
-                accept=".zip,.geojson,.json"
+                accept=".zip,.geojson,.json,.dxf,.dwg"
               />
               <div class="hint">
-                ZIP Shapefile ή GeoJSON. Δεν απαιτείται επιλογή layer προορισμού και δεν γίνεται εγγραφή δεδομένων.
+                ZIP Shapefile, GeoJSON, DXF ή DWG. Τα CAD αρχεία θεωρούνται σε ΕΓΣΑ '87 / EPSG:2100.
+                Η ανάγνωση DXF είναι ενεργή. Για πραγματικό DWG απαιτείται CAD converter και δεν γίνεται ψευδής μετατροπή σε DXF.
               </div>
             </div>
 
@@ -964,6 +1010,46 @@
             <div class="action-row">
               <button class="secondary-button" id="clearTempButton" type="button">
                 Καθαρισμός προσωρινών
+              </button>
+            </div>
+
+          </div>
+
+          <div class="download-data-panel" id="downloadDataPanel">
+
+            <div class="download-data-info">
+              Κατέβασε το επιλεγμένο θεματικό επίπεδο από τον ενεργό χάρτη.
+              Στους χάρτες των Δασαρχείων λαμβάνονται μόνο τα features του αντίστοιχου View,
+              ενώ στον χάρτη «Διεύθυνση Δασών Εύβοιας» λαμβάνονται τα συνολικά διαθέσιμα features.
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="downloadLayerSelect">Θεματικό επίπεδο</label>
+              <select class="form-control" id="downloadLayerSelect"></select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="downloadFormatSelect">Μορφή αρχείου</label>
+              <select class="form-control" id="downloadFormatSelect">
+                <option value="shapefile">Shapefile ZIP — EPSG:2100</option>
+                <option value="geojson">GeoJSON — EPSG:4326</option>
+                <option value="dxf">DXF — EPSG:2100</option>
+                <option value="dwg" disabled>DWG — απαιτεί CAD converter</option>
+              </select>
+              <div class="hint">
+                Shapefile και DXF παράγονται σε ΕΓΣΑ '87. Το GeoJSON παράγεται σε WGS84.
+              </div>
+              <div class="cad-limit-note">
+                Το DWG είναι πραγματικό CAD binary format και δεν δημιουργείται με απλή μετονομασία DXF.
+                Η επιλογή θα ενεργοποιηθεί όταν συνδεθεί αξιόπιστος DWG converter.
+              </div>
+            </div>
+
+            <div class="status-box" id="downloadDataStatus"></div>
+
+            <div class="action-row">
+              <button class="primary-button" id="downloadLayerButton" type="button">
+                Λήψη layer
               </button>
             </div>
 
@@ -1144,7 +1230,7 @@
 
         <div class="map-badge">
           <strong id="mapBadgeOffice">Δασαρχείο Ιστιαίας</strong>
-          · Διεύθυνση Δασών Ευβοίας
+          <span id="mapBadgeSuffix"> · Διεύθυνση Δασών Ευβοίας</span>
         </div>
 
         <div class="attribute-table-dock" id="attributeTableDock">
@@ -1183,9 +1269,39 @@
   </div>
 
   <script type="module">
-    import shp from "https://unpkg.com/shpjs@6.2.0/dist/shp.esm.js";
+    // Οι parsers φορτώνονται μόνο όταν πραγματικά χρειαστούν.
+    // Έτσι αποτυχία CDN/parser δεν σταματά το βασικό ArcGIS application.
+    let shpParserPromise = null;
+    let dxfParserPromise = null;
+
+    async function getShpParser() {
+      if (!shpParserPromise) {
+        shpParserPromise = import(
+          "https://unpkg.com/shpjs@6.2.0/dist/shp.esm.js"
+        ).then((module) => module.default || module);
+      }
+
+      return await shpParserPromise;
+    }
+
+    async function getDxfParser() {
+      if (!dxfParserPromise) {
+        dxfParserPromise = import(
+          "https://esm.sh/dxf-parser@1.1.2"
+        ).then((module) => module.default || module);
+      }
+
+      return await dxfParserPromise;
+    }
 
     const WEB_MAPS = {
+      diefthynsi: {
+        label: "Διεύθυνση Δασών Εύβοιας",
+        title: "Διεύθυνση Δασών Εύβοιας",
+        canonical: null,
+        isOverall: true,
+        itemId: "8ac98d657c614007b10a69ad5e5b5c6c",
+      },
       istiaias: {
         label: "Ιστιαίας",
         title: "Δασαρχείο Ιστιαίας",
@@ -1255,6 +1371,7 @@
     const officeButtons = document.querySelectorAll(".office-button");
     const currentOfficeName = document.getElementById("currentOfficeName");
     const mapBadgeOffice = document.getElementById("mapBadgeOffice");
+    const mapBadgeSuffix = document.getElementById("mapBadgeSuffix");
     const loadingOverlay = document.getElementById("loadingOverlay");
     const loadingText = document.getElementById("loadingText");
 
@@ -1275,6 +1392,14 @@
     const featureEditor = document.getElementById("featureEditor");
 
     const tableToolButton = document.getElementById("tableToolButton");
+
+    const downloadDataToolButton = document.getElementById("downloadDataToolButton");
+    const downloadDataPanel = document.getElementById("downloadDataPanel");
+    const downloadLayerSelect = document.getElementById("downloadLayerSelect");
+    const downloadFormatSelect = document.getElementById("downloadFormatSelect");
+    const downloadLayerButton = document.getElementById("downloadLayerButton");
+    const downloadDataStatus = document.getElementById("downloadDataStatus");
+
     const attributeTableDock = document.getElementById("attributeTableDock");
     const attributeTableOffice = document.getElementById("attributeTableOffice");
     const closeAttributeTableButton = document.getElementById("closeAttributeTableButton");
@@ -1310,6 +1435,11 @@
     let uploadInProgress = false;
     let uploadReview = null;
     let reviewTargetLayer = null;
+    let downloadableLayers = [];
+    let downloadInProgress = false;
+
+    const GREEK_GRID_WKT =
+      'PROJCS["GGRS_1987_Greek_Grid",GEOGCS["GCS_GGRS_1987",DATUM["D_GGRS_1987",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",24.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]';
 
     const tempGraphicsLayer = new GraphicsLayer({
       title: "Προσωρινά γραφικά",
@@ -1359,6 +1489,32 @@
         .replaceAll("'", "&#039;");
     }
 
+    function isOverallMap(officeKey = currentOfficeKey) {
+      return WEB_MAPS[officeKey]?.isOverall === true;
+    }
+
+    function closeMutationPanels() {
+      uploadPanel.classList.remove("visible");
+      uploadToolButton.classList.remove("open");
+      editPanel.classList.remove("visible");
+      editToolButton.classList.remove("open");
+    }
+
+    function updateMutationAvailability() {
+      const locked = isOverallMap();
+
+      uploadToolButton.disabled = locked;
+      editToolButton.disabled = locked;
+      uploadToolButton.classList.toggle("disabled", locked);
+      editToolButton.classList.toggle("disabled", locked);
+
+      if (locked) {
+        closeMutationPanels();
+        clearReview();
+        clearUploadStatus();
+      }
+    }
+
     function updateOfficeUI(officeKey) {
       const office = WEB_MAPS[officeKey];
       currentOfficeKey = officeKey;
@@ -1371,13 +1527,18 @@
 
       currentOfficeName.textContent = office.title;
       mapBadgeOffice.textContent = office.title;
-      uploadOfficeName.textContent = office.canonical;
-      editOfficeName.textContent = office.canonical;
-      attributeTableOffice.textContent = office.title;
-      attributeTable.tableTitle = `Πίνακας γνωρισμάτων — ${office.canonical}`;
-      document.title = `${office.title} | ΔΔ Ευβοίας`;
+      mapBadgeSuffix.style.display = office.isOverall ? "none" : "";
 
-      if (parsedGeoJSON) {
+      uploadOfficeName.textContent = office.canonical || "—";
+      editOfficeName.textContent = office.canonical || "—";
+
+      attributeTableOffice.textContent = office.title;
+      attributeTable.tableTitle = `Πίνακας γνωρισμάτων — ${office.title}`;
+      document.title = `${office.title} | GIS`;
+
+      updateMutationAvailability();
+
+      if (parsedGeoJSON && office.canonical) {
         reviewConfirmCheckbox.checked = false;
         runUploadReview();
       }
@@ -1454,7 +1615,7 @@
       }
 
       attributeTable.tableTitle =
-        `Πίνακας γνωρισμάτων — ${WEB_MAPS[currentOfficeKey].canonical}`;
+        `Πίνακας γνωρισμάτων — ${WEB_MAPS[currentOfficeKey].title}`;
 
       attributeTable.actionColumnConfig = {
         label: "Μετάβαση στο αντικείμενο",
@@ -1473,6 +1634,11 @@
     }
 
     async function configureEditorForMap(webMap) {
+      if (isOverallMap()) {
+        featureEditor.layerInfos = [];
+        return;
+      }
+
       const candidateLayers = webMap.allLayers
         .toArray()
         .filter((layer) => layer?.type === "feature");
@@ -1517,6 +1683,49 @@
         selfEnabled: true,
         featureEnabled: true
       };
+    }
+
+    async function configureDownloadForMap(webMap) {
+      const previousLayerId = Number(downloadLayerSelect.value);
+
+      const layers = webMap.allLayers
+        .toArray()
+        .filter(
+          (layer) =>
+            layer?.type === "feature" &&
+            TARGET_LAYERS[Number(layer.layerId)]
+        )
+        .sort((a, b) => Number(a.layerId) - Number(b.layerId));
+
+      await Promise.all(
+        layers.map(async (layer) => {
+          try {
+            await layer.load();
+          } catch (error) {
+            console.warn("Δεν φορτώθηκε layer για λήψη:", layer?.title, error);
+          }
+        })
+      );
+
+      downloadableLayers = layers;
+      downloadLayerSelect.innerHTML = "";
+
+      for (const layer of layers) {
+        const option = document.createElement("option");
+        option.value = String(layer.layerId);
+        option.textContent = TARGET_LAYERS[Number(layer.layerId)]?.name || layer.title;
+        downloadLayerSelect.appendChild(option);
+      }
+
+      if (
+        Number.isFinite(previousLayerId) &&
+        layers.some((layer) => Number(layer.layerId) === previousLayerId)
+      ) {
+        downloadLayerSelect.value = String(previousLayerId);
+      }
+
+      downloadLayerButton.disabled = layers.length === 0;
+      clearDownloadDataStatus();
     }
 
     async function confirmAndCancelEditorWorkflow(message) {
@@ -1572,6 +1781,7 @@
 
         await configureEditorForMap(webMap);
         await configureAttributeTableForMap(webMap);
+        await configureDownloadForMap(webMap);
 
         const initialViewpoint = webMap.initialViewProperties?.viewpoint;
         if (initialViewpoint) {
@@ -1597,7 +1807,7 @@
 
         if (
           !(await confirmAndCancelEditorWorkflow(
-            "Υπάρχει επεξεργασία σε εξέλιξη. Να ακυρωθεί και να αλλάξουμε Δασαρχείο;"
+            "Υπάρχει επεξεργασία σε εξέλιξη. Να ακυρωθεί και να αλλάξουμε χάρτη;"
           ))
         ) {
           return;
@@ -1630,7 +1840,51 @@
       setAttributeTableOpen(false);
     });
 
+    function setDownloadDataStatus(type, message) {
+      downloadDataStatus.className = `status-box visible ${type}`;
+      downloadDataStatus.textContent = message;
+    }
+
+    function clearDownloadDataStatus() {
+      downloadDataStatus.className = "status-box";
+      downloadDataStatus.textContent = "";
+    }
+
+    downloadDataToolButton.addEventListener("click", async () => {
+      const opening = !downloadDataPanel.classList.contains("visible");
+
+      if (
+        opening &&
+        !(await confirmAndCancelEditorWorkflow(
+          "Υπάρχει επεξεργασία σε εξέλιξη. Να ακυρωθεί και να ανοίξει η λήψη θεματικού επιπέδου;"
+        ))
+      ) {
+        return;
+      }
+
+      const visible = downloadDataPanel.classList.toggle("visible");
+      downloadDataToolButton.classList.toggle("open", visible);
+
+      if (visible) {
+        uploadPanel.classList.remove("visible");
+        uploadToolButton.classList.remove("open");
+
+        tempPanel.classList.remove("visible");
+        tempToolButton.classList.remove("open");
+        tempSketch.classList.add("temp-sketch-hidden");
+        try { await tempSketch.cancel(); } catch (error) {}
+
+        editPanel.classList.remove("visible");
+        editToolButton.classList.remove("open");
+      }
+    });
+
     uploadToolButton.addEventListener("click", async () => {
+      if (isOverallMap()) {
+        window.alert("Για μόνιμη εισαγωγή δεδομένων επίλεξε πρώτα συγκεκριμένο Δασαρχείο.");
+        return;
+      }
+
       const opening = !uploadPanel.classList.contains("visible");
 
       if (
@@ -1653,6 +1907,9 @@
 
         editPanel.classList.remove("visible");
         editToolButton.classList.remove("open");
+
+        downloadDataPanel.classList.remove("visible");
+        downloadDataToolButton.classList.remove("open");
       }
     });
 
@@ -1692,6 +1949,9 @@
         editPanel.classList.remove("visible");
         editToolButton.classList.remove("open");
 
+        downloadDataPanel.classList.remove("visible");
+        downloadDataToolButton.classList.remove("open");
+
         tempSketch.classList.remove("temp-sketch-hidden");
         setTempStatus(
           "info",
@@ -1704,6 +1964,11 @@
     });
 
     editToolButton.addEventListener("click", async () => {
+      if (isOverallMap()) {
+        window.alert("Για μόνιμη επεξεργασία δεδομένων επίλεξε πρώτα συγκεκριμένο Δασαρχείο.");
+        return;
+      }
+
       const opening = !editPanel.classList.contains("visible");
 
       if (!opening && featureEditor.activeWorkflow) {
@@ -1727,6 +1992,9 @@
         tempToolButton.classList.remove("open");
         tempSketch.classList.add("temp-sketch-hidden");
         try { await tempSketch.cancel(); } catch (error) {}
+
+        downloadDataPanel.classList.remove("visible");
+        downloadDataToolButton.classList.remove("open");
       }
     });
 
@@ -1809,6 +2077,300 @@
       });
     }
 
+    function cadPoint(value) {
+      if (!value) return null;
+
+      if (Array.isArray(value) && value.length >= 2) {
+        const x = Number(value[0]);
+        const y = Number(value[1]);
+        return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null;
+      }
+
+      const x = Number(value.x ?? value.X);
+      const y = Number(value.y ?? value.Y);
+
+      return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null;
+    }
+
+    function cadArcCoordinates(centerValue, radiusValue, startAngle, endAngle, fullCircle = false) {
+      const center = cadPoint(centerValue);
+      const radius = Number(radiusValue);
+
+      if (!center || !Number.isFinite(radius) || radius <= 0) {
+        return [];
+      }
+
+      let start = Number(startAngle);
+      let end = Number(endAngle);
+
+      if (fullCircle) {
+        start = 0;
+        end = Math.PI * 2;
+      }
+
+      if (!Number.isFinite(start)) start = 0;
+      if (!Number.isFinite(end)) end = start + Math.PI * 2;
+
+      while (end < start) end += Math.PI * 2;
+
+      const sweep = Math.max(0.000001, end - start);
+      const segments = Math.max(12, Math.ceil(sweep / (Math.PI / 36)));
+      const coords = [];
+
+      for (let i = 0; i <= segments; i++) {
+        const angle = start + (sweep * i) / segments;
+        coords.push([
+          center[0] + radius * Math.cos(angle),
+          center[1] + radius * Math.sin(angle)
+        ]);
+      }
+
+      return coords;
+    }
+
+    function bulgeSegmentCoordinates(p1, p2, bulge) {
+      const b = Number(bulge);
+
+      if (!Number.isFinite(b) || Math.abs(b) < 1e-12) {
+        return [p1, p2];
+      }
+
+      const dx = p2[0] - p1[0];
+      const dy = p2[1] - p1[1];
+      const chord = Math.hypot(dx, dy);
+
+      if (!chord) return [p1];
+
+      const theta = 4 * Math.atan(b);
+      const midX = (p1[0] + p2[0]) / 2;
+      const midY = (p1[1] + p2[1]) / 2;
+      const distance = chord * (1 - b * b) / (4 * b);
+      const leftX = -dy / chord;
+      const leftY = dx / chord;
+
+      const cx = midX + leftX * distance;
+      const cy = midY + leftY * distance;
+      const radius = Math.hypot(p1[0] - cx, p1[1] - cy);
+      const start = Math.atan2(p1[1] - cy, p1[0] - cx);
+      const segments = Math.max(2, Math.ceil(Math.abs(theta) / (Math.PI / 36)));
+      const coords = [];
+
+      for (let i = 0; i <= segments; i++) {
+        const angle = start + (theta * i) / segments;
+        coords.push([
+          cx + radius * Math.cos(angle),
+          cy + radius * Math.sin(angle)
+        ]);
+      }
+
+      return coords;
+    }
+
+    function expandedCadPolylineVertices(vertices, closed) {
+      const usable = (vertices || [])
+        .map((vertex) => ({
+          point: cadPoint(vertex),
+          bulge: Number(vertex?.bulge || 0)
+        }))
+        .filter((item) => item.point);
+
+      if (usable.length < 2) return usable.map((item) => item.point);
+
+      const path = [];
+
+      const appendSegment = (a, b) => {
+        const coords = bulgeSegmentCoordinates(a.point, b.point, a.bulge);
+
+        if (!path.length) {
+          path.push(...coords);
+        } else {
+          path.push(...coords.slice(1));
+        }
+      };
+
+      for (let i = 0; i < usable.length - 1; i++) {
+        appendSegment(usable[i], usable[i + 1]);
+      }
+
+      if (closed) {
+        appendSegment(usable[usable.length - 1], usable[0]);
+
+        if (
+          path.length &&
+          (path[0][0] !== path[path.length - 1][0] ||
+           path[0][1] !== path[path.length - 1][1])
+        ) {
+          path.push([...path[0]]);
+        }
+      }
+
+      return path;
+    }
+
+    function cadEntityGraphics(entity) {
+      const type = String(entity?.type || "").toUpperCase();
+      const attributes = {
+        CAD_LAYER: entity?.layer || "",
+        CAD_TYPE: type,
+        CAD_HANDLE: entity?.handle || ""
+      };
+
+      const makeGraphic = (geometry) =>
+        new Graphic({
+          geometry,
+          attributes,
+          symbol: temporarySymbol(geometry.type)
+        });
+
+      if (type === "POINT") {
+        const xy = cadPoint(entity.position || entity.location || entity.point || entity.vertices?.[0]);
+        if (!xy) return [];
+
+        return [
+          makeGraphic(
+            new Point({
+              x: xy[0],
+              y: xy[1],
+              spatialReference: SR_EGSA87
+            })
+          )
+        ];
+      }
+
+      if (type === "LINE") {
+        const vertices = (entity.vertices || []).map(cadPoint).filter(Boolean);
+        if (vertices.length < 2) return [];
+
+        return [
+          makeGraphic(
+            new Polyline({
+              paths: [vertices],
+              spatialReference: SR_EGSA87
+            })
+          )
+        ];
+      }
+
+      if (type === "LWPOLYLINE" || type === "POLYLINE") {
+        const closed =
+          entity.shape === true ||
+          entity.closed === true ||
+          ((Number(entity.flags) || 0) & 1) === 1;
+
+        const path = expandedCadPolylineVertices(entity.vertices || entity.points || [], closed);
+        if (path.length < 2) return [];
+
+        if (closed && path.length >= 4) {
+          return [
+            makeGraphic(
+              new Polygon({
+                rings: [path],
+                spatialReference: SR_EGSA87
+              })
+            )
+          ];
+        }
+
+        return [
+          makeGraphic(
+            new Polyline({
+              paths: [path],
+              spatialReference: SR_EGSA87
+            })
+          )
+        ];
+      }
+
+      if (type === "ARC") {
+        const path = cadArcCoordinates(
+          entity.center,
+          entity.radius,
+          entity.startAngle,
+          entity.endAngle,
+          false
+        );
+
+        if (path.length < 2) return [];
+
+        return [
+          makeGraphic(
+            new Polyline({
+              paths: [path],
+              spatialReference: SR_EGSA87
+            })
+          )
+        ];
+      }
+
+      if (type === "CIRCLE") {
+        const ring = cadArcCoordinates(
+          entity.center,
+          entity.radius,
+          0,
+          Math.PI * 2,
+          true
+        );
+
+        if (ring.length < 4) return [];
+
+        return [
+          makeGraphic(
+            new Polygon({
+              rings: [ring],
+              spatialReference: SR_EGSA87
+            })
+          )
+        ];
+      }
+
+      if (type === "SOLID" || type === "3DFACE") {
+        const vertices = (entity.vertices || entity.points || [])
+          .map(cadPoint)
+          .filter(Boolean);
+
+        if (vertices.length < 3) return [];
+
+        const ring = ensureClosedRing(vertices);
+
+        return [
+          makeGraphic(
+            new Polygon({
+              rings: [ring],
+              spatialReference: SR_EGSA87
+            })
+          )
+        ];
+      }
+
+      return [];
+    }
+
+    async function parseDxfGraphics(fileText) {
+      const DxfParser = await getDxfParser();
+      const parser = new DxfParser();
+      const dxf = parser.parse(fileText);
+      const entities = Array.isArray(dxf?.entities) ? dxf.entities : [];
+
+      const graphics = [];
+      let ignored = 0;
+
+      for (const entity of entities) {
+        const entityGraphics = cadEntityGraphics(entity);
+
+        if (entityGraphics.length) {
+          graphics.push(...entityGraphics);
+        } else {
+          ignored += 1;
+        }
+      }
+
+      return {
+        graphics,
+        ignored,
+        totalEntities: entities.length
+      };
+    }
+
     tempFileInput.addEventListener("change", async () => {
       clearTempStatus();
 
@@ -1819,40 +2381,56 @@
         setTempStatus("info", "Ανάγνωση προσωρινού αρχείου...");
 
         const extension = file.name.split(".").pop()?.toLowerCase();
-        let parsed;
+        let graphics = [];
+        let extraMessage = "";
 
-        if (extension === "zip") {
-          parsed = await shp(await file.arrayBuffer());
-        } else if (extension === "geojson" || extension === "json") {
-          parsed = JSON.parse(await file.text());
+        if (extension === "dxf") {
+          const result = await parseDxfGraphics(await file.text());
+          graphics = result.graphics;
+
+          extraMessage =
+            result.ignored > 0
+              ? ` Αγνοήθηκαν ${result.ignored} μη υποστηριζόμενα CAD entities από ${result.totalEntities}.`
+              : "";
+        } else if (extension === "dwg") {
+          throw new Error(
+            "Το DWG αναγνωρίστηκε, αλλά απαιτεί πραγματικό DWG parser/converter. " +
+            "Δεν θα μετονομάσουμε ή προσποιηθούμε ότι ένα DXF είναι DWG. " +
+            "Για την παρούσα δοκιμή χρησιμοποίησε DXF σε ΕΓΣΑ '87."
+          );
         } else {
-          throw new Error("Επίλεξε ZIP Shapefile ή GeoJSON.");
-        }
+          let parsed;
 
-        const featureCollection = normalizeFeatureCollection(parsed);
-
-        if (!featureCollection.features.length) {
-          throw new Error("Το αρχείο δεν περιέχει features.");
-        }
-
-        inspectGeometry(featureCollection.features);
-
-        const graphics = [];
-
-        for (let i = 0; i < featureCollection.features.length; i++) {
-          const feature = featureCollection.features[i];
-
-          if (!feature?.geometry) {
-            continue;
+          if (extension === "zip") {
+            const shp = await getShpParser();
+            parsed = await shp(await file.arrayBuffer());
+          } else if (extension === "geojson" || extension === "json") {
+            parsed = JSON.parse(await file.text());
+          } else {
+            throw new Error("Επίλεξε ZIP Shapefile, GeoJSON, DXF ή DWG.");
           }
 
-          graphics.push(
-            await buildTemporaryGraphic(feature)
-          );
+          const featureCollection = normalizeFeatureCollection(parsed);
+
+          if (!featureCollection.features.length) {
+            throw new Error("Το αρχείο δεν περιέχει features.");
+          }
+
+          inspectGeometry(featureCollection.features);
+
+          for (let i = 0; i < featureCollection.features.length; i++) {
+            const feature = featureCollection.features[i];
+
+            if (!feature?.geometry) continue;
+
+            graphics.push(
+              await buildTemporaryGraphic(feature)
+            );
+          }
         }
 
         if (!graphics.length) {
-          throw new Error("Δεν βρέθηκαν features με έγκυρη γεωμετρία.");
+          throw new Error("Δεν βρέθηκαν υποστηριζόμενα αντικείμενα με έγκυρη γεωμετρία.");
         }
 
         tempGraphicsLayer.addMany(graphics);
@@ -1868,7 +2446,7 @@
 
         setTempStatus(
           "success",
-          `${graphics.length} προσωρινά αντικείμενα προστέθηκαν στον χάρτη. Δεν αποθηκεύτηκαν σε κανένα layer.`
+          `${graphics.length} προσωρινά αντικείμενα προστέθηκαν στον χάρτη. Δεν αποθηκεύτηκαν σε κανένα layer.${extraMessage}`
         );
       } catch (error) {
         console.error("Temporary file error:", error);
@@ -2387,6 +2965,14 @@
 
       if (!office || !target) return;
 
+      if (!office.canonical) {
+        setUploadStatus(
+          "warning",
+          "Για μόνιμη εισαγωγή δεδομένων επίλεξε συγκεκριμένο Δασαρχείο."
+        );
+        return;
+      }
+
       setUploadStatus("info", `Έλεγχος schema του ${target.name}...`);
 
       try {
@@ -2466,6 +3052,7 @@
 
         if (extension === "zip") {
           selectedFileKind = "zip";
+          const shp = await getShpParser();
           parsed = await shp(await file.arrayBuffer());
         } else if (extension === "geojson" || extension === "json") {
           selectedFileKind = "geojson";
@@ -2773,6 +3360,649 @@
       return { successCount, errors };
     }
 
+    function safeFilePart(value) {
+      return String(value || "layer")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\p{L}\p{N}_-]+/gu, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 80) || "layer";
+    }
+
+    function dateStamp() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      return `${y}${m}${d}`;
+    }
+
+    function triggerBlobDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    function selectedDownloadLayer() {
+      const layerId = Number(downloadLayerSelect.value);
+
+      return downloadableLayers.find(
+        (layer) => Number(layer.layerId) === layerId
+      ) || null;
+    }
+
+    function exportFieldList(layer) {
+      const excludedNames = new Set([
+        "OBJECTID",
+        "FID",
+        "SHAPE",
+        "SHAPE_LENGTH",
+        "SHAPE_AREA",
+        "SHAPE__LENGTH",
+        "SHAPE__AREA"
+      ]);
+
+      return (layer.fields || []).filter((field) => {
+        const normalized = normalizeFieldName(field.name);
+
+        if (field.type === "oid" || field.type === "geometry") return false;
+        return !excludedNames.has(normalized);
+      });
+    }
+
+    function exportPropertyValue(value, field) {
+      if (value === null || value === undefined) return null;
+
+      if (field?.type === "date") {
+        const numeric = Number(value);
+
+        if (Number.isFinite(numeric)) {
+          const date = new Date(numeric);
+          return Number.isNaN(date.getTime()) ? null : date.toISOString();
+        }
+
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? null : date.toISOString();
+      }
+
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+
+      if (typeof value === "object") {
+        try {
+          return JSON.stringify(value);
+        } catch (error) {
+          return String(value);
+        }
+      }
+
+      return value;
+    }
+
+    function uniqueShapefileFieldNames(fields) {
+      const used = new Set();
+      const map = {};
+
+      for (const field of fields) {
+        const baseRaw = String(field.name || "FIELD")
+          .toUpperCase()
+          .replace(/[^A-Z0-9_]/g, "_");
+
+        let base = (baseRaw || "FIELD").slice(0, 10);
+        let candidate = base;
+        let counter = 1;
+
+        while (used.has(candidate)) {
+          const suffix = String(counter++);
+          candidate = `${base.slice(0, Math.max(1, 10 - suffix.length))}${suffix}`;
+        }
+
+        used.add(candidate);
+        map[field.name] = candidate;
+      }
+
+      return map;
+    }
+
+    function exportProperties(layer, attributes, forShapefile = false) {
+      const fields = exportFieldList(layer);
+      const shpNames = forShapefile
+        ? uniqueShapefileFieldNames(fields)
+        : null;
+
+      const properties = {};
+
+      for (const field of fields) {
+        const key = forShapefile ? shpNames[field.name] : field.name;
+        properties[key] = exportPropertyValue(attributes?.[field.name], field);
+      }
+
+      return properties;
+    }
+
+    async function queryAllLayerFeatures(layer, outSpatialReference) {
+      await layer.load();
+
+      const idQuery = layer.createQuery();
+      idQuery.where = "1=1";
+
+      const objectIds = await layer.queryObjectIds(idQuery);
+
+      if (!Array.isArray(objectIds) || objectIds.length === 0) {
+        return [];
+      }
+
+      const features = [];
+      const chunkSize = 500;
+
+      for (let start = 0; start < objectIds.length; start += chunkSize) {
+        const query = layer.createQuery();
+        query.objectIds = objectIds.slice(start, start + chunkSize);
+        query.outFields = ["*"];
+        query.returnGeometry = true;
+        query.outSpatialReference = outSpatialReference;
+
+        const result = await layer.queryFeatures(query);
+        features.push(...(result.features || []));
+      }
+
+      return features;
+    }
+
+    function standardRingArea(ring) {
+      let area = 0;
+
+      for (let i = 0; i < ring.length - 1; i++) {
+        const p1 = ring[i];
+        const p2 = ring[i + 1];
+        area += p1[0] * p2[1] - p2[0] * p1[1];
+      }
+
+      return area / 2;
+    }
+
+    function orientGeoJSONRing(ring, outer) {
+      const closed = ensureClosedRing(ring);
+      const ccw = standardRingArea(closed) > 0;
+
+      if ((outer && ccw) || (!outer && !ccw)) {
+        return closed;
+      }
+
+      return ensureClosedRing([...closed].reverse());
+    }
+
+    function pointInRing(point, ring) {
+      let inside = false;
+      const x = point[0];
+      const y = point[1];
+
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const xi = ring[i][0];
+        const yi = ring[i][1];
+        const xj = ring[j][0];
+        const yj = ring[j][1];
+
+        const intersects =
+          yi > y !== yj > y &&
+          x < ((xj - xi) * (y - yi)) / ((yj - yi) || Number.EPSILON) + xi;
+
+        if (intersects) inside = !inside;
+      }
+
+      return inside;
+    }
+
+    function arcgisPolygonToGeoJSONGeometry(geometry) {
+      const rings = (geometry.rings || [])
+        .filter((ring) => Array.isArray(ring) && ring.length >= 3)
+        .map(ensureClosedRing);
+
+      if (!rings.length) return null;
+
+      let outers = rings.filter((ring) => signedRingArea(ring) > 0);
+      let holes = rings.filter((ring) => signedRingArea(ring) <= 0);
+
+      if (!outers.length) {
+        outers = [rings[0]];
+        holes = rings.slice(1);
+      }
+
+      const polygons = outers.map((outer) => ({
+        outer,
+        rings: [orientGeoJSONRing(outer, true)]
+      }));
+
+      for (const hole of holes) {
+        const probe = hole[0];
+        const container = polygons.find((polygon) =>
+          pointInRing(probe, polygon.outer)
+        );
+
+        if (container) {
+          container.rings.push(
+            orientGeoJSONRing(hole, false)
+          );
+        } else {
+          polygons.push({
+            outer: hole,
+            rings: [orientGeoJSONRing(hole, true)]
+          });
+        }
+      }
+
+      if (polygons.length === 1) {
+        return {
+          type: "Polygon",
+          coordinates: polygons[0].rings
+        };
+      }
+
+      return {
+        type: "MultiPolygon",
+        coordinates: polygons.map((polygon) => polygon.rings)
+      };
+    }
+
+    function arcgisGeometryToGeoJSON(geometry) {
+      if (!geometry) return null;
+
+      if (geometry.type === "point") {
+        return {
+          type: "Point",
+          coordinates: [geometry.x, geometry.y]
+        };
+      }
+
+      if (geometry.type === "multipoint") {
+        return {
+          type: "MultiPoint",
+          coordinates: geometry.points || []
+        };
+      }
+
+      if (geometry.type === "polyline") {
+        const paths = geometry.paths || [];
+
+        if (paths.length === 1) {
+          return {
+            type: "LineString",
+            coordinates: paths[0]
+          };
+        }
+
+        return {
+          type: "MultiLineString",
+          coordinates: paths
+        };
+      }
+
+      if (geometry.type === "polygon") {
+        return arcgisPolygonToGeoJSONGeometry(geometry);
+      }
+
+      return null;
+    }
+
+    function featureCollectionFromArcGIS(layer, features, forShapefile = false) {
+      const output = [];
+
+      for (const feature of features) {
+        const geometry = arcgisGeometryToGeoJSON(feature.geometry);
+        if (!geometry) continue;
+
+        output.push({
+          type: "Feature",
+          geometry,
+          properties: exportProperties(
+            layer,
+            feature.attributes || {},
+            forShapefile
+          )
+        });
+      }
+
+      return {
+        type: "FeatureCollection",
+        features: output
+      };
+    }
+
+    function downloadBaseName(layer) {
+      const logical =
+        TARGET_LAYERS[Number(layer.layerId)]?.name ||
+        layer.title ||
+        "layer";
+
+      const mapPart = isOverallMap()
+        ? "Dieythynsi_Dason_Evoias"
+        : WEB_MAPS[currentOfficeKey].canonical;
+
+      return `${safeFilePart(logical)}_${safeFilePart(mapPart)}_${dateStamp()}`;
+    }
+
+    async function exportLayerAsGeoJSON(layer) {
+      const features = await queryAllLayerFeatures(layer, SR_WGS84);
+
+      if (!features.length) {
+        throw new Error("Το layer δεν περιέχει features για λήψη.");
+      }
+
+      const featureCollection = featureCollectionFromArcGIS(
+        layer,
+        features,
+        false
+      );
+
+      const blob = new Blob(
+        [JSON.stringify(featureCollection, null, 2)],
+        { type: "application/geo+json;charset=utf-8" }
+      );
+
+      triggerBlobDownload(
+        blob,
+        `${downloadBaseName(layer)}.geojson`
+      );
+
+      return featureCollection.features.length;
+    }
+
+    async function exportLayerAsShapefile(layer) {
+      if (!window.shpwrite) {
+        throw new Error("Η βιβλιοθήκη δημιουργίας Shapefile δεν φορτώθηκε.");
+      }
+
+      if (!window.JSZip) {
+        throw new Error("Η βιβλιοθήκη ZIP δεν φορτώθηκε.");
+      }
+
+      const features = await queryAllLayerFeatures(layer, SR_EGSA87);
+
+      if (!features.length) {
+        throw new Error("Το layer δεν περιέχει features για λήψη.");
+      }
+
+      const featureCollection = featureCollectionFromArcGIS(
+        layer,
+        features,
+        true
+      );
+
+      const base = downloadBaseName(layer);
+
+      const rawZip = await window.shpwrite.zip(
+        featureCollection,
+        {
+          outputType: "blob",
+          compression: "STORE",
+          prj: GREEK_GRID_WKT,
+          types: {
+            point: base,
+            polygon: base,
+            polyline: base
+          }
+        }
+      );
+
+      const zip = await window.JSZip.loadAsync(rawZip);
+
+      const fileNames = Object.keys(zip.files);
+
+      for (const fileName of fileNames) {
+        if (fileName.toLowerCase().endsWith(".prj")) {
+          zip.file(fileName, GREEK_GRID_WKT);
+        }
+
+        if (fileName.toLowerCase().endsWith(".dbf")) {
+          const cpgName = fileName.replace(/\.dbf$/i, ".cpg");
+          zip.file(cpgName, "UTF-8");
+        }
+      }
+
+      const finalBlob = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE"
+      });
+
+      triggerBlobDownload(
+        finalBlob,
+        `${base}.zip`
+      );
+
+      return featureCollection.features.length;
+    }
+
+    function dxfNumber(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return "0";
+      return number.toFixed(6).replace(/\.?0+$/, "");
+    }
+
+    function dxfPolylineEntity(path, layerName, closed = false) {
+      if (!Array.isArray(path) || path.length < 2) return "";
+
+      const parts = [
+        "0", "POLYLINE",
+        "8", layerName,
+        "66", "1",
+        "70", closed ? "1" : "0"
+      ];
+
+      const vertices =
+        closed &&
+        path.length > 2 &&
+        path[0][0] === path[path.length - 1][0] &&
+        path[0][1] === path[path.length - 1][1]
+          ? path.slice(0, -1)
+          : path;
+
+      for (const coord of vertices) {
+        parts.push(
+          "0", "VERTEX",
+          "8", layerName,
+          "10", dxfNumber(coord[0]),
+          "20", dxfNumber(coord[1]),
+          "30", "0"
+        );
+      }
+
+      parts.push(
+        "0", "SEQEND",
+        "8", layerName
+      );
+
+      return parts.join("\n");
+    }
+
+    function dxfFromArcGISFeatures(layer, features) {
+      const logicalName = safeFilePart(
+        TARGET_LAYERS[Number(layer.layerId)]?.name || layer.title || "GIS_LAYER"
+      ).slice(0, 31);
+
+      const parts = [
+        "0", "SECTION",
+        "2", "HEADER",
+        "9", "$ACADVER",
+        "1", "AC1009",
+        "0", "ENDSEC",
+        "0", "SECTION",
+        "2", "TABLES",
+        "0", "TABLE",
+        "2", "LAYER",
+        "70", "1",
+        "0", "LAYER",
+        "2", logicalName,
+        "70", "0",
+        "62", "7",
+        "6", "CONTINUOUS",
+        "0", "ENDTAB",
+        "0", "ENDSEC",
+        "0", "SECTION",
+        "2", "ENTITIES"
+      ];
+
+      let written = 0;
+
+      for (const feature of features) {
+        const geometry = feature.geometry;
+        if (!geometry) continue;
+
+        if (geometry.type === "point") {
+          parts.push(
+            "0", "POINT",
+            "8", logicalName,
+            "10", dxfNumber(geometry.x),
+            "20", dxfNumber(geometry.y),
+            "30", "0"
+          );
+          written += 1;
+          continue;
+        }
+
+        if (geometry.type === "multipoint") {
+          for (const point of geometry.points || []) {
+            parts.push(
+              "0", "POINT",
+              "8", logicalName,
+              "10", dxfNumber(point[0]),
+              "20", dxfNumber(point[1]),
+              "30", "0"
+            );
+            written += 1;
+          }
+          continue;
+        }
+
+        if (geometry.type === "polyline") {
+          for (const path of geometry.paths || []) {
+            const entity = dxfPolylineEntity(path, logicalName, false);
+            if (entity) {
+              parts.push(entity);
+              written += 1;
+            }
+          }
+          continue;
+        }
+
+        if (geometry.type === "polygon") {
+          for (const ring of geometry.rings || []) {
+            const entity = dxfPolylineEntity(
+              ensureClosedRing(ring),
+              logicalName,
+              true
+            );
+            if (entity) {
+              parts.push(entity);
+              written += 1;
+            }
+          }
+        }
+      }
+
+      parts.push(
+        "0", "ENDSEC",
+        "0", "EOF"
+      );
+
+      return {
+        text: parts.join("\n") + "\n",
+        written
+      };
+    }
+
+    async function exportLayerAsDxf(layer) {
+      const features = await queryAllLayerFeatures(layer, SR_EGSA87);
+
+      if (!features.length) {
+        throw new Error("Το layer δεν περιέχει features για λήψη.");
+      }
+
+      const dxf = dxfFromArcGISFeatures(layer, features);
+
+      if (!dxf.written) {
+        throw new Error("Δεν βρέθηκαν υποστηριζόμενες γεωμετρίες για DXF.");
+      }
+
+      const blob = new Blob(
+        [dxf.text],
+        { type: "application/dxf;charset=utf-8" }
+      );
+
+      triggerBlobDownload(
+        blob,
+        `${downloadBaseName(layer)}.dxf`
+      );
+
+      return features.length;
+    }
+
+    downloadLayerButton.addEventListener("click", async () => {
+      if (downloadInProgress) return;
+
+      const layer = selectedDownloadLayer();
+      const format = downloadFormatSelect.value;
+
+      if (!layer) {
+        setDownloadDataStatus("error", "Δεν έχει επιλεγεί διαθέσιμο layer.");
+        return;
+      }
+
+      if (format === "dwg") {
+        setDownloadDataStatus(
+          "warning",
+          "Η δημιουργία πραγματικού DWG απαιτεί CAD converter. Η επιλογή δεν έχει ενεργοποιηθεί ακόμη."
+        );
+        return;
+      }
+
+      downloadInProgress = true;
+      downloadLayerButton.disabled = true;
+
+      const targetName =
+        TARGET_LAYERS[Number(layer.layerId)]?.name ||
+        layer.title;
+
+      setDownloadDataStatus(
+        "info",
+        `Προετοιμασία ${targetName}...`
+      );
+
+      try {
+        let count = 0;
+
+        if (format === "geojson") {
+          count = await exportLayerAsGeoJSON(layer);
+        } else if (format === "shapefile") {
+          count = await exportLayerAsShapefile(layer);
+        } else if (format === "dxf") {
+          count = await exportLayerAsDxf(layer);
+        } else {
+          throw new Error("Μη υποστηριζόμενη μορφή λήψης.");
+        }
+
+        setDownloadDataStatus(
+          "success",
+          `Η λήψη προετοιμάστηκε επιτυχώς για ${count} features του ${targetName}.`
+        );
+      } catch (error) {
+        console.error("Layer download error:", error);
+        setDownloadDataStatus(
+          "error",
+          error?.message || "Η λήψη του layer απέτυχε."
+        );
+      } finally {
+        downloadInProgress = false;
+        downloadLayerButton.disabled = downloadableLayers.length === 0;
+      }
+    });
+
     function refreshCurrentMapLayers() {
       try {
         mapElement.map?.allLayers?.forEach((layer) => {
@@ -2799,7 +4029,13 @@
       const target = uploadReview.target;
       const targetLayer = reviewTargetLayer;
 
-      if (!office || !target || !targetLayer) return;
+      if (!office || !office.canonical || !target || !targetLayer) {
+        setUploadStatus(
+          "warning",
+          "Για μόνιμη εισαγωγή δεδομένων επίλεξε συγκεκριμένο Δασαρχείο."
+        );
+        return;
+      }
 
       const confirmed = window.confirm(
         `Να προστεθούν ${parsedGeoJSON.features.length} features στο ${target.name} του Δασαρχείου ${office.canonical};\n\nΗ εγγραφή μέσω του Hosted View ενημερώνει το υποκείμενο Source Hosted Feature Layer.`
